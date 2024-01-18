@@ -1,4 +1,4 @@
-module github.com/PeernetOfficial/core
+module github.com/newinfoOffical/core
 
 go 1.18
 

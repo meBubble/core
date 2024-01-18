@@ -11,7 +11,7 @@ import (
     "fmt"
     "time"
 
-    "github.com/PeernetOfficial/core/blockchain"
+    "github.com/newinfoOffical/core/blockchain"
 )
 
 func (api *WebapiInstance) dispatchSearch(input SearchRequest, NodeID []byte) (job *SearchJob) {

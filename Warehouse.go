@@ -7,14 +7,14 @@ Author:     Peter Kleissner
 package core
 
 import (
-	"github.com/PeernetOfficial/core/warehouse"
+    "github.com/newinfoOffical/core/warehouse"
 )
 
 func (backend *Backend) initUserWarehouse() {
-	var err error
-	backend.UserWarehouse, err = warehouse.Init(backend.Config.WarehouseMain)
+    var err error
+    backend.UserWarehouse, err = warehouse.Init(backend.Config.WarehouseMain)
 
-	if err != nil {
-		backend.LogError("initUserWarehouse", "error: %s\n", err.Error())
-	}
+    if err != nil {
+        backend.LogError("initUserWarehouse", "error: %s\n", err.Error())
+    }
 }

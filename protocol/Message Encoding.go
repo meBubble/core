@@ -9,7 +9,7 @@ Intermediary between low-level packets and high-level interpretation.
 package protocol
 
 import (
-	"github.com/PeernetOfficial/core/btcec"
+    "github.com/newinfoOffical/core/btcec"
 )
 
 // ProtocolVersion is the current protocol version
@@ -17,9 +17,9 @@ const ProtocolVersion = 0
 
 // MessageRaw is a high-level message between peers that has not been decoded
 type MessageRaw struct {
-	PacketRaw
-	SenderPublicKey *btcec.PublicKey // Sender Public Key, ECDSA (secp256k1) 257-bit
-	SequenceInfo    *SequenceExpiry  // Sequence
+    PacketRaw
+    SenderPublicKey *btcec.PublicKey // Sender Public Key, ECDSA (secp256k1) 257-bit
+    SequenceInfo    *SequenceExpiry  // Sequence
 }
 
 // The maximum packet size is = 65535 - 8 UDP byte header - 40 byte IPv6 header (IPv4 header is only 20 bytes).
@@ -36,5 +36,5 @@ const internetSafeMTU = 1280 - 8 - 40
 
 // isPacketSizeExceed checks if the max packet size would be exceeded with the payload
 func isPacketSizeExceed(currentSize int, testSize int) bool {
-	return currentSize+testSize > udpMaxPacketSize-PacketLengthMin
+    return currentSize+testSize > udpMaxPacketSize-PacketLengthMin
 }
