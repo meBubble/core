@@ -60,6 +60,7 @@ These are the functions provided by the API:
 /search/statistic               Search result statistics
 
 /download/start                 Start the download of a file
+/download/view                  View file on the standard browser
 /download/status                Get the status of a download
 /download/action                Pause, resume, and cancel a download
 
@@ -886,6 +887,18 @@ Example response (only apistatus, id, and downloadstatus are used):
     "downloadstatus": 0
 }
 ```
+
+### View file on the browser
+
+This requests 2 parameters which is the Node ID and the hash of the file
+and provides the possibility to view the file on the standard browser.
+
+```
+Request:    GET /download/view?hash=[file hash to download]&node=[node ID]
+Result:     200 with the file content
+```
+
+Example request: `http://127.0.0.1:112/download/view??hash=654682692CE42909B5B5397EFE2973A0E0EF2E8E417F2AC2660825B447DBB450&node=78A511C9284A9A942A6C921827D63804E0C70C00938175B3F4A9529E8481A29C`
 
 ### Get Download Status
 
