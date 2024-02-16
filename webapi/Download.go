@@ -8,6 +8,7 @@ package webapi
 
 import (
     "encoding/hex"
+    "io"
     "math"
     "net/http"
     "os"
@@ -15,8 +16,8 @@ import (
     "sync"
     "time"
 
-    "github.com/newinfoOffical/core"
     "github.com/google/uuid"
+    "github.com/newinfoOffical/core"
 )
 
 type apiResponseDownloadStatus struct {
@@ -95,6 +96,60 @@ func (api *WebapiInstance) apiDownloadStart(w http.ResponseWriter, r *http.Reque
     api.Backend.LogError("Download.DownloadStart", "output %v", apiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.id, DownloadStatus: DownloadWaitMetadata})
 
     EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.id, DownloadStatus: DownloadWaitMetadata})
+}
+
+/*
+apiViewFile allows to open the file from the standard web browser.
+
+Request:    GET /download/view?hash=[file hash to download]&node=[node ID]
+Result:     200 with file content
+*/
+func (api *WebapiInstance) apiViewFile(w http.ResponseWriter, r *http.Request) {
+    r.ParseForm()
+
+    // validate hashes, must be blake3
+    hash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
+    nodeID, valid2 := DecodeBlake3Hash(r.Form.Get("node"))
+    if !valid1 || !valid2 {
+        http.Error(w, "", http.StatusBadRequest)
+        return
+    }
+
+    var err error
+    var peer *core.PeerInfo
+
+    // Default timeout for connection is 10 seconds. This will be an optional parameter in the future.
+    timeout := 10 * time.Second
+    
+    if len(nodeID) != 0 {
+        peer, err = PeerConnectNode(api.Backend, nodeID, timeout)
+    }
+
+    if err != nil {
+        http.Error(w, "Could not connect to remote peer. 😢", http.StatusNotFound)
+        return
+    }
+
+    offset := 0
+    limit := 0
+
+    // start the reader
+    //reader, fileSize, transferSize, err := webapi.FileStartReader(peer, fileHash, uint64(offset), uint64(limit), r.Context().Done())
+    reader, _, transferSize, err := FileStartReader(peer, hash, uint64(offset), uint64(limit), r.Context().Done())
+    if reader != nil {
+        defer reader.Close()
+    }
+    if err != nil || reader == nil {
+        http.Error(w, "File not found.", http.StatusNotFound)
+        return
+    }
+
+    if err != nil || reader == nil {
+        http.Error(w, "File not found.", http.StatusNotFound)
+        return
+    }
+
+    io.Copy(w, io.LimitReader(reader, int64(transferSize)))
 }
 
 /*
