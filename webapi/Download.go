@@ -103,6 +103,8 @@ apiViewFile allows to open the file from the standard web browser.
 
 Request:    GET /download/view?hash=[file hash to download]&node=[node ID]
 Result:     200 with file content
+
+Example: http://127.0.0.1:3000/download/view?hash=b3ebab3a0c44a3856489ae19dde8053d8f13fde411b3fa8fc4b27cffd8cae620&node=dea635b6e32bff773c06ff8923928023af2a9774ba8d15f2511b68f2fa6a474d
 */
 func (api *WebapiInstance) apiViewFile(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
@@ -110,6 +112,7 @@ func (api *WebapiInstance) apiViewFile(w http.ResponseWriter, r *http.Request) {
 	// validate hashes, must be blake3
 	hash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
 	nodeID, valid2 := DecodeBlake3Hash(r.Form.Get("node"))
+
 	if !valid1 || !valid2 {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return

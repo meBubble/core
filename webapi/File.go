@@ -7,6 +7,7 @@ Author:     Peter Kleissner
 package webapi
 
 import (
+	"encoding/hex"
 	"net/http"
 	"strconv"
 	"time"
@@ -34,6 +35,7 @@ type apiFileMetadata struct {
 type apiFile struct {
 	ID             uuid.UUID         `json:"id"`             // Unique ID.
 	Hash           []byte            `json:"hash"`           // Blake3 hash of the file data
+	HashHex        string            `json:"hashhex"`        // Blake3 hash of the file data in the form of hex
 	Type           uint8             `json:"type"`           // File Type. For example audio or document. See TypeX.
 	Format         uint16            `json:"format"`         // File Format. This is more granular, for example PDF or Word file. See FormatX.
 	Size           uint64            `json:"size"`           // Size of the file
@@ -42,6 +44,7 @@ type apiFile struct {
 	Description    string            `json:"description"`    // Description. This is expected to be multiline and contain hashtags!
 	Date           time.Time         `json:"date"`           // Date shared
 	NodeID         []byte            `json:"nodeid"`         // Node ID, owner of the file. Read only.
+	NodeIDHex      string            `json:"nodeidhex"`      // Node ID HEX, owner of the file in the form of hex value
 	Metadata       []apiFileMetadata `json:"metadata"`       // Additional metadata.
 	Username       string            `json:"username"`       // Username of the user who uploaded the file
 	ProfilePicture []byte            `json:"ProfilePicture"` // ProfilePicture of the particular user
@@ -50,7 +53,7 @@ type apiFile struct {
 // --- conversion from core to API data ---
 // Currently in a Hacky way for quick generalised filters
 func blockRecordFileToAPI(input blockchain.BlockRecordFile, localNode bool) (output apiFile) {
-	output = apiFile{ID: input.ID, Hash: input.Hash, NodeID: input.NodeID, Type: input.Type, Format: input.Format, Size: input.Size, Username: input.Username, ProfilePicture: input.ProfilePicture, Metadata: []apiFileMetadata{}}
+	output = apiFile{ID: input.ID, Hash: input.Hash, HashHex: hex.EncodeToString(input.Hash), NodeID: input.NodeID, NodeIDHex: hex.EncodeToString(input.NodeID), Type: input.Type, Format: input.Format, Size: input.Size, Username: input.Username, ProfilePicture: input.ProfilePicture, Metadata: []apiFileMetadata{}}
 
 	NumberOfNodesShared := false
 
