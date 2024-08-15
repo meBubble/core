@@ -7,6 +7,7 @@ Author:     Peter Kleissner
 package core
 
 import (
+	"github.com/newinfoOffical/core/mobile/networkInterface"
 	"net"
 	"strings"
 	"time"
@@ -14,7 +15,7 @@ import (
 
 // FindInterfaceByIP finds an interface based on the IP. The IP must be available at the interface.
 func FindInterfaceByIP(ip net.IP) (iface *net.Interface, ipnet *net.IPNet) {
-	interfaceList, err := net.Interfaces()
+	interfaceList, err := networkInterface.Interfaces()
 	if err != nil {
 		return nil, nil
 	}
@@ -42,7 +43,7 @@ func FindInterfaceByIP(ip net.IP) (iface *net.Interface, ipnet *net.IPNet) {
 // NetworkListIPs returns a list of all IPs
 func NetworkListIPs() (IPs []net.IP, err error) {
 
-	interfaceList, err := net.Interfaces()
+	interfaceList, err := networkInterface.Interfaces()
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +103,7 @@ func (nets *Networks) networkChangeMonitor() {
 	for {
 		time.Sleep(time.Second * changeMonitorFrequency)
 
-		interfaceList, err := net.Interfaces()
+		interfaceList, err := networkInterface.Interfaces()
 		if err != nil {
 			nets.backend.LogError("networkChangeMonitor", "enumerating network adapters failed: %s\n", err.Error())
 			continue

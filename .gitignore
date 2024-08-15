@@ -4,3 +4,4 @@ log.txt
 test.*
 # Ignore the IDE gitignore files
 .idea/
+vendor/

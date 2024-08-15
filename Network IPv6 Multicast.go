@@ -17,16 +17,17 @@ The Multicast listener opens port 12912 with SO_REUSEADDR to allow multiple proc
 package core
 
 import (
-    "encoding/hex"
-    "errors"
-    "net"
-    "strconv"
-    "time"
+	"encoding/hex"
+	"errors"
+	"github.com/newinfoOffical/core/mobile/networkInterface"
+	"net"
+	"strconv"
+	"time"
 
-    "github.com/newinfoOffical/core/btcec"
-    "github.com/newinfoOffical/core/protocol"
-    "github.com/newinfoOffical/core/reuseport"
-    "golang.org/x/net/ipv6"
+	"github.com/newinfoOffical/core/btcec"
+	"github.com/newinfoOffical/core/protocol"
+	"github.com/newinfoOffical/core/reuseport"
+	"golang.org/x/net/ipv6"
 )
 
 // Multicast group is site-local. Group ID is 112.
@@ -40,114 +41,114 @@ var ipv6MulticastPublicKey *btcec.PublicKey
 const ipv6MulticastPrivateKeyH = "016ad30bfb369926523bf18d136298b6c31d0817e9fb6c21feed89ae22cad788"
 
 func initMulticastIPv6() {
-    if configPK, err := hex.DecodeString(ipv6MulticastPrivateKeyH); err == nil {
-        ipv6MulticastPrivateKey, ipv6MulticastPublicKey = btcec.PrivKeyFromBytes(btcec.S256(), configPK)
-    }
+	if configPK, err := hex.DecodeString(ipv6MulticastPrivateKeyH); err == nil {
+		ipv6MulticastPrivateKey, ipv6MulticastPublicKey = btcec.PrivKeyFromBytes(btcec.S256(), configPK)
+	}
 }
 
 // MulticastIPv6Join joins the Multicast group
 func (network *Network) MulticastIPv6Join() (err error) {
-    if ipv6MulticastPrivateKey == nil || ipv6MulticastPublicKey == nil {
-        return
-    }
+	if ipv6MulticastPrivateKey == nil || ipv6MulticastPublicKey == nil {
+		return
+	}
 
-    network.multicastIP = net.ParseIP(ipv6MulticastGroup)
+	network.multicastIP = net.ParseIP(ipv6MulticastGroup)
 
-    // listen on a special socket
-    network.multicastSocket, err = reuseport.ListenPacket("udp6", net.JoinHostPort(network.address.IP.String(), strconv.Itoa(ipv6MulticastPort)))
-    if err != nil {
-        network.backend.LogError("MulticastIPv6Join", "multicast socket listen on IP '%s' port '%d': %v\n", network.address.IP.String(), ipv6MulticastPort, err)
-        return err
-    }
+	// listen on a special socket
+	network.multicastSocket, err = reuseport.ListenPacket("udp6", net.JoinHostPort(network.address.IP.String(), strconv.Itoa(ipv6MulticastPort)))
+	if err != nil {
+		network.backend.LogError("MulticastIPv6Join", "multicast socket listen on IP '%s' port '%d': %v\n", network.address.IP.String(), ipv6MulticastPort, err)
+		return err
+	}
 
-    joinMulticastGroup := func(iface *net.Interface) (err error) {
-        pc := ipv6.NewPacketConn(network.multicastSocket)
-        if err := pc.JoinGroup(iface, &net.UDPAddr{IP: network.multicastIP}); err != nil {
-            //LogError("MulticastIPv6Join", "join multicast group iface '%s' multicast IP '%s' listen on IP '%s' port '%d': %v\n", iface.Username, network.multicastIP.String(), network.address.IP.String(), ipv6MulticastPort, err)
-            return err
-        }
+	joinMulticastGroup := func(iface *net.Interface) (err error) {
+		pc := ipv6.NewPacketConn(network.multicastSocket)
+		if err := pc.JoinGroup(iface, &net.UDPAddr{IP: network.multicastIP}); err != nil {
+			//LogError("MulticastIPv6Join", "join multicast group iface '%s' multicast IP '%s' listen on IP '%s' port '%d': %v\n", iface.Username, network.multicastIP.String(), network.address.IP.String(), ipv6MulticastPort, err)
+			return err
+		}
 
-        // receive messages from self or other processes running on the same computer
-        if loop, err := pc.MulticastLoopback(); err == nil && !loop {
-            if err := pc.SetMulticastLoopback(true); err != nil {
-                network.backend.LogError("MulticastIPv6Join", "setting multicast loopback status: %v\n", err)
-            }
-        }
+		// receive messages from self or other processes running on the same computer
+		if loop, err := pc.MulticastLoopback(); err == nil && !loop {
+			if err := pc.SetMulticastLoopback(true); err != nil {
+				network.backend.LogError("MulticastIPv6Join", "setting multicast loopback status: %v\n", err)
+			}
+		}
 
-        return nil
-    }
+		return nil
+	}
 
-    // specific interface or join all?
-    if network.iface != nil {
-        if err = joinMulticastGroup(network.iface); err != nil {
-            return err
-        }
-    } else {
-        interfaceList, err := net.Interfaces()
-        if err != nil {
-            return err
-        }
+	// specific interface or join all?
+	if network.iface != nil {
+		if err = joinMulticastGroup(network.iface); err != nil {
+			return err
+		}
+	} else {
+		interfaceList, err := networkInterface.Interfaces()
+		if err != nil {
+			return err
+		}
 
-        for _, ifaceSingle := range interfaceList {
-            joinMulticastGroup(&ifaceSingle)
-        }
-    }
+		for _, ifaceSingle := range interfaceList {
+			joinMulticastGroup(&ifaceSingle)
+		}
+	}
 
-    go network.MulticastIPv6Listen()
+	go network.MulticastIPv6Listen()
 
-    return nil
+	return nil
 }
 
 // MulticastIPv6Listen listens for incoming multicast packets
 // Fork from network.Listen! Keep any changes synced.
 func (network *Network) MulticastIPv6Listen() {
-    for {
-        // Buffer: Must be created for each packet as it is passed as pointer.
-        // If the buffer is too small, ReadFromUDP only reads until its length and returns this error: "wsarecvfrom: A message sent on a datagram socket was larger than the internal message buffer or some other network limit, or the buffer used to receive a datagram into was smaller than the datagram itself."
-        buffer := make([]byte, maxPacketSize)
-        length, sender, err := network.multicastSocket.ReadFrom(buffer)
+	for {
+		// Buffer: Must be created for each packet as it is passed as pointer.
+		// If the buffer is too small, ReadFromUDP only reads until its length and returns this error: "wsarecvfrom: A message sent on a datagram socket was larger than the internal message buffer or some other network limit, or the buffer used to receive a datagram into was smaller than the datagram itself."
+		buffer := make([]byte, maxPacketSize)
+		length, sender, err := network.multicastSocket.ReadFrom(buffer)
 
-        if err != nil {
-            network.backend.LogError("MulticastIPv6Listen", "receiving UDP message: %v\n", err) // Only log for debug purposes.
-            time.Sleep(time.Millisecond * 50)                                                   // In case of endless errors, prevent ddos of CPU.
-            continue
-        }
+		if err != nil {
+			network.backend.LogError("MulticastIPv6Listen", "receiving UDP message: %v\n", err) // Only log for debug purposes.
+			time.Sleep(time.Millisecond * 50)                                                   // In case of endless errors, prevent ddos of CPU.
+			continue
+		}
 
-        // skip incoming packets that were looped back
-        if network.networkGroup.ipListen.IsAddressSelf(sender.(*net.UDPAddr)) {
-            continue
-        }
+		// skip incoming packets that were looped back
+		if network.networkGroup.ipListen.IsAddressSelf(sender.(*net.UDPAddr)) {
+			continue
+		}
 
-        // For good network practice (and reducing amount of parallel connections), do not allow link-local to talk to non-link-local addresses.
-        if sender.(*net.UDPAddr).IP.IsLinkLocalUnicast() != network.address.IP.IsLinkLocalUnicast() {
-            continue
-        }
+		// For good network practice (and reducing amount of parallel connections), do not allow link-local to talk to non-link-local addresses.
+		if sender.(*net.UDPAddr).IP.IsLinkLocalUnicast() != network.address.IP.IsLinkLocalUnicast() {
+			continue
+		}
 
-        //fmt.Printf("MulticastIPv6Listen from %s at network %s\n", sender.String(), network.address.String())
+		//fmt.Printf("MulticastIPv6Listen from %s at network %s\n", sender.String(), network.address.String())
 
-        if length < protocol.PacketLengthMin {
-            // Discard packets that do not meet the minimum length.
-            continue
-        }
+		if length < protocol.PacketLengthMin {
+			// Discard packets that do not meet the minimum length.
+			continue
+		}
 
-        // send the packet to a channel which is processed by multiple workers.
-        network.networkGroup.rawPacketsIncoming <- networkWire{network: network, sender: sender.(*net.UDPAddr), raw: buffer[:length], receiverPublicKey: ipv6MulticastPublicKey, unicast: false}
-    }
+		// send the packet to a channel which is processed by multiple workers.
+		network.networkGroup.rawPacketsIncoming <- networkWire{network: network, sender: sender.(*net.UDPAddr), raw: buffer[:length], receiverPublicKey: ipv6MulticastPublicKey, unicast: false}
+	}
 }
 
 // MulticastIPv6Send sends out a single multicast messages to discover peers at the same site
 func (network *Network) MulticastIPv6Send() (err error) {
-    _, blockchainHeight, blockchainVersion := network.backend.UserBlockchain.Header()
-    packets := protocol.EncodeAnnouncement(true, true, nil, nil, nil, network.backend.FeatureSupport(), blockchainHeight, blockchainVersion, network.backend.userAgent)
-    if len(packets) == 0 {
-        return errors.New("error encoding multicast announcement")
-    }
+	_, blockchainHeight, blockchainVersion := network.backend.UserBlockchain.Header()
+	packets := protocol.EncodeAnnouncement(true, true, nil, nil, nil, network.backend.FeatureSupport(), blockchainHeight, blockchainVersion, network.backend.userAgent)
+	if len(packets) == 0 {
+		return errors.New("error encoding multicast announcement")
+	}
 
-    raw, err := protocol.PacketEncrypt(network.backend.PeerPrivateKey, ipv6MulticastPublicKey, &protocol.PacketRaw{Protocol: protocol.ProtocolVersion, Command: protocol.CommandLocalDiscovery, Payload: packets[0]})
-    if err != nil {
-        return err
-    }
+	raw, err := protocol.PacketEncrypt(network.backend.PeerPrivateKey, ipv6MulticastPublicKey, &protocol.PacketRaw{Protocol: protocol.ProtocolVersion, Command: protocol.CommandLocalDiscovery, Payload: packets[0]})
+	if err != nil {
+		return err
+	}
 
-    // send out the wire
-    return network.send(network.multicastIP, ipv6MulticastPort, raw)
+	// send out the wire
+	return network.send(network.multicastIP, ipv6MulticastPort, raw)
 }
