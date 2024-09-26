@@ -10,20 +10,21 @@ import (
 	"github.com/newinfoOffical/core/mobile/networkInterface"
 	"net"
 	"strings"
+	"tailscale.com/net/netmon"
 	"time"
 )
 
 // FindInterfaceByIP finds an interface based on the IP. The IP must be available at the interface.
-func FindInterfaceByIP(ip net.IP) (iface *net.Interface, ipnet *net.IPNet) {
-	interfaceList, err := networkInterface.Interfaces()
+func FindInterfaceByIP(ip net.IP) (iface *netmon.Interface, ipnet *net.IPNet) {
+	interfaceList, err := networkInterface.GetInterfaces("")
 	if err != nil {
 		return nil, nil
 	}
 
 	// iterate through all interfaces
 	for _, ifaceSingle := range interfaceList {
-		addresses, err := ifaceSingle.Addrs()
-		if err != nil {
+		addresses := ifaceSingle.AltAddrs
+		if len(addresses) == 0 {
 			continue
 		}
 
@@ -103,7 +104,7 @@ func (nets *Networks) networkChangeMonitor() {
 	for {
 		time.Sleep(time.Second * changeMonitorFrequency)
 
-		interfaceList, err := networkInterface.Interfaces()
+		interfaceList, err := networkInterface.GetInterfaces("")
 		if err != nil {
 			nets.backend.LogError("networkChangeMonitor", "enumerating network adapters failed: %s\n", err.Error())
 			continue
@@ -168,7 +169,7 @@ func (nets *Networks) networkChangeMonitor() {
 }
 
 // networkChangeInterfaceNew is called when a new interface is detected
-func (nets *Networks) networkChangeInterfaceNew(iface net.Interface, addresses []net.Addr) {
+func (nets *Networks) networkChangeInterfaceNew(iface netmon.Interface, addresses []net.Addr) {
 	nets.backend.LogError("networkChangeInterfaceNew", "new interface '%s' (%d IPs)\n", iface.Name, len(addresses))
 
 	networksNew := nets.InterfaceStart(iface, addresses)
@@ -215,7 +216,7 @@ func (nets *Networks) networkChangeInterfaceRemove(iface string, addresses []net
 }
 
 // networkChangeIPNew is called when an existing interface lists a new IP
-func (nets *Networks) networkChangeIPNew(iface net.Interface, address net.Addr) {
+func (nets *Networks) networkChangeIPNew(iface netmon.Interface, address net.Addr) {
 	nets.backend.LogError("networkChangeIPNew", "new interface '%s' IP %s\n", iface.Name, address.String())
 
 	networksNew := nets.InterfaceStart(iface, []net.Addr{address})
@@ -228,7 +229,7 @@ func (nets *Networks) networkChangeIPNew(iface net.Interface, address net.Addr) 
 }
 
 // networkChangeIPRemove is called when an existing interface removes an IP
-func (nets *Networks) networkChangeIPRemove(iface net.Interface, address net.Addr) {
+func (nets *Networks) networkChangeIPRemove(iface netmon.Interface, address net.Addr) {
 	nets.RLock()
 	defer nets.RUnlock()
 

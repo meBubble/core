@@ -1,11 +1,5 @@
 package networkInterface
 
-import (
-	MeBubbleNetwork "github.com/newinfoOffical/core/mobile/net"
-	"net"
-	"runtime"
-)
-
 //type Interface struct {
 //    Index        int
 //    MTU          int
@@ -17,26 +11,26 @@ import (
 //type HardwareAddr []byte
 //type Flags uint
 
-func Interfaces() ([]net.Interface, error) {
-	var interfaces []net.Interface
-	var err error
-
-	if runtime.GOOS == "android" {
-		AndroidInterfaces, err := MeBubbleNetwork.Interfaces()
-		if err != nil {
-			return nil, err
-		}
-
-		interfaces = AndroidInterfaces.([]net.Interface)
-
-	} else {
-		interfaces, err = net.Interfaces()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return interfaces, nil
-}
+//func Interfaces() ([]net.Interface, error) {
+//	var interfaces []net.Interface
+//	var err error
+//
+//	if runtime.GOOS == "android" {
+//		AndroidInterfaces, err := MeBubbleNetwork.Interfaces()
+//		if err != nil {
+//			return nil, err
+//		}
+//
+//		interfaces = AndroidInterfaces.([]net.Interface)
+//
+//	} else {
+//		interfaces, err = net.Interfaces()
+//		if err != nil {
+//			return nil, err
+//		}
+//	}
+//	return interfaces, nil
+//}
 
 // ManualConvert pretty stupid but works.
 //func ManualConvert(I []MeBubbleNetwork.Interface) (n []net.Interface) {

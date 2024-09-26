@@ -19,7 +19,6 @@ package core
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/newinfoOffical/core/mobile/networkInterface"
 	"net"
 	"strconv"
 	"time"
@@ -27,7 +26,6 @@ import (
 	"github.com/newinfoOffical/core/btcec"
 	"github.com/newinfoOffical/core/protocol"
 	"github.com/newinfoOffical/core/reuseport"
-	"golang.org/x/net/ipv6"
 )
 
 // Multicast group is site-local. Group ID is 112.
@@ -61,38 +59,38 @@ func (network *Network) MulticastIPv6Join() (err error) {
 		return err
 	}
 
-	joinMulticastGroup := func(iface *net.Interface) (err error) {
-		pc := ipv6.NewPacketConn(network.multicastSocket)
-		if err := pc.JoinGroup(iface, &net.UDPAddr{IP: network.multicastIP}); err != nil {
-			//LogError("MulticastIPv6Join", "join multicast group iface '%s' multicast IP '%s' listen on IP '%s' port '%d': %v\n", iface.Username, network.multicastIP.String(), network.address.IP.String(), ipv6MulticastPort, err)
-			return err
-		}
-
-		// receive messages from self or other processes running on the same computer
-		if loop, err := pc.MulticastLoopback(); err == nil && !loop {
-			if err := pc.SetMulticastLoopback(true); err != nil {
-				network.backend.LogError("MulticastIPv6Join", "setting multicast loopback status: %v\n", err)
-			}
-		}
-
-		return nil
-	}
+	//joinMulticastGroup := func(iface *netmon.Interface) (err error) {
+	//	pc := ipv6.NewPacketConn(network.multicastSocket)
+	//	if err := pc.JoinGroup(iface, &net.UDPAddr{IP: network.multicastIP}); err != nil {
+	//		//LogError("MulticastIPv6Join", "join multicast group iface '%s' multicast IP '%s' listen on IP '%s' port '%d': %v\n", iface.Username, network.multicastIP.String(), network.address.IP.String(), ipv6MulticastPort, err)
+	//		return err
+	//	}
+	//
+	//	// receive messages from self or other processes running on the same computer
+	//	if loop, err := pc.MulticastLoopback(); err == nil && !loop {
+	//		if err := pc.SetMulticastLoopback(true); err != nil {
+	//			network.backend.LogError("MulticastIPv6Join", "setting multicast loopback status: %v\n", err)
+	//		}
+	//	}
+	//
+	//	return nil
+	//}
 
 	// specific interface or join all?
-	if network.iface != nil {
-		if err = joinMulticastGroup(network.iface); err != nil {
-			return err
-		}
-	} else {
-		interfaceList, err := networkInterface.Interfaces()
-		if err != nil {
-			return err
-		}
+	//if network.iface != nil {
+	//	if err = joinMulticastGroup(network.iface); err != nil {
+	//		return err
+	//	}
+	//} else {
+	//interfaceList, err := networkInterface.GetInterfaces("")
+	//if err != nil {
+	//	return err
+	//}
 
-		for _, ifaceSingle := range interfaceList {
-			joinMulticastGroup(&ifaceSingle)
-		}
-	}
+	//for _, ifaceSingle := range interfaceList {
+	//	joinMulticastGroup(&ifaceSingle)
+	//}
+	//}
 
 	go network.MulticastIPv6Listen()
 
