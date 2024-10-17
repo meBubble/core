@@ -24,8 +24,8 @@ AutoUpdateSeedList: true
 # Initial peer seed list. If AutoUpdateSeedList is enabled then any changes will be overwritten on update.
 SeedListVersion: 1
 SeedList:
-  - PublicKey: 031a4a703145147edea525ce027bec68f76743e6e1e47817996961d489fda01431 # 1.peernet.network
-    Address: ["185.254.123.112:112","[2a0c:1880::112]:112"]
+  - PublicKey: 03089110e5d9879f99b15f750780b8aee676098262560b5308b45ea6440e83c1b9
+    Address: ["217.76.63.222:112"]
 
 # Connection settings
 EnableUPnP:     true    # Enables support for UPnP.
