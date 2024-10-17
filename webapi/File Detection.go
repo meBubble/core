@@ -7,196 +7,201 @@ Author:     Peter Kleissner
 package webapi
 
 import (
-    "net/http"
-    "os"
-    "path"
-    "strings"
+	"github.com/google/uuid"
+	"github.com/newinfoOffical/core/blockchain"
+	"github.com/newinfoOffical/core/protocol"
+	"github.com/newinfoOffical/core/warehouse"
+	"net/http"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
 
-    "github.com/newinfoOffical/core"
+	"github.com/newinfoOffical/core"
 )
 
 // PathToExtension translates a path to a file extension, if possible. It also returns the second file extension if there is one (relevant for files like "test.tar.gz").
 func PathToExtension(Path string) (extension, extension2 string, valid bool) {
-    _, fileA := path.Split(Path)
+	_, fileA := path.Split(Path)
 
-    parts := strings.Split(fileA, ".")
-    if len(parts) <= 1 {
-        return "", "", false
-    }
-    extension = parts[len(parts)-1]
-    extension = strings.ToLower(extension)
+	parts := strings.Split(fileA, ".")
+	if len(parts) <= 1 {
+		return "", "", false
+	}
+	extension = parts[len(parts)-1]
+	extension = strings.ToLower(extension)
 
-    if len(parts) >= 3 {
-        extension2 = parts[len(parts)-2]
-        extension2 = strings.ToLower(extension2)
-    }
+	if len(parts) >= 3 {
+		extension2 = parts[len(parts)-2]
+		extension2 = strings.ToLower(extension2)
+	}
 
-    return extension, extension2, true
+	return extension, extension2, true
 }
 
 // FileTranslateExtension translates the extension to a File Type and File Format. If invalid, types are 0.
 func FileTranslateExtension(extension string) (fileType, fileFormat uint16) {
-    switch extension {
-    case "txt", "log", "ini", "json", "md":
-        return core.TypeText, core.FormatText
+	switch extension {
+	case "txt", "log", "ini", "json", "md":
+		return core.TypeText, core.FormatText
 
-    case "csv", "tsv":
-        return core.TypeText, core.FormatCSV
+	case "csv", "tsv":
+		return core.TypeText, core.FormatCSV
 
-    case "html", "htm":
-        return core.TypeText, core.FormatHTML
+	case "html", "htm":
+		return core.TypeText, core.FormatHTML
 
-    case "doc", "docx", "rtf", "odt":
-        return core.TypeDocument, core.FormatWord
+	case "doc", "docx", "rtf", "odt":
+		return core.TypeDocument, core.FormatWord
 
-    case "pdf":
-        return core.TypeDocument, core.FormatPDF
+	case "pdf":
+		return core.TypeDocument, core.FormatPDF
 
-    case "xls", "xlsx", "ods":
-        return core.TypeDocument, core.FormatExcel
+	case "xls", "xlsx", "ods":
+		return core.TypeDocument, core.FormatExcel
 
-    case "gif", "jpg", "jpeg", "png", "svg", "bmp", "tif", "tiff", "jfif", "webp":
-        return core.TypePicture, core.FormatPicture
+	case "gif", "jpg", "jpeg", "png", "svg", "bmp", "tif", "tiff", "jfif", "webp":
+		return core.TypePicture, core.FormatPicture
 
-    case "mp4", "flv", "avi", "mov", "mpg", "mpeg", "h264", "3g2", "3gp", "mkv", "wmv", "webm", "ts":
-        return core.TypeVideo, core.FormatVideo
+	case "mp4", "flv", "avi", "mov", "mpg", "mpeg", "h264", "3g2", "3gp", "mkv", "wmv", "webm", "ts":
+		return core.TypeVideo, core.FormatVideo
 
-    case "mp3", "ogg", "flac":
-        return core.TypeAudio, core.FormatAudio
+	case "mp3", "ogg", "flac":
+		return core.TypeAudio, core.FormatAudio
 
-    case "zip", "rar", "7z", "tar":
-        return core.TypeContainer, core.FormatContainer
+	case "zip", "rar", "7z", "tar":
+		return core.TypeContainer, core.FormatContainer
 
-    case "ppt", "pptx", "odp":
-        return core.TypeDocument, core.FormatPowerpoint
+	case "ppt", "pptx", "odp":
+		return core.TypeDocument, core.FormatPowerpoint
 
-    case "epub", "mobi", "prc":
-        return core.TypeEbook, core.FormatEbook
+	case "epub", "mobi", "prc":
+		return core.TypeEbook, core.FormatEbook
 
-    case "gz", "bz", "bz2", "xz":
-        return core.TypeCompressed, core.FormatCompressed
+	case "gz", "bz", "bz2", "xz":
+		return core.TypeCompressed, core.FormatCompressed
 
-    case "sql":
-        return core.TypeText, core.FormatDatabase
+	case "sql":
+		return core.TypeText, core.FormatDatabase
 
-    case "eml", "mbox":
-        return core.TypeText, core.FormatEmail
+	case "eml", "mbox":
+		return core.TypeText, core.FormatEmail
 
-    case "exe", "sys", "dll", "cmd", "bat":
-        return core.TypeExecutable, core.FormatExecutable
+	case "exe", "sys", "dll", "cmd", "bat":
+		return core.TypeExecutable, core.FormatExecutable
 
-    case "msi":
-        return core.TypeExecutable, core.FormatInstaller
+	case "msi":
+		return core.TypeExecutable, core.FormatInstaller
 
-    case "apk":
-        return core.TypeExecutable, core.FormatAPK
+	case "apk":
+		return core.TypeExecutable, core.FormatAPK
 
-    case "iso":
-        return core.TypeContainer, core.FormatISO
+	case "iso":
+		return core.TypeContainer, core.FormatISO
 
-    case "pnsearch":
-        return core.TypeText, core.FormatPeernetSearch
+	case "pnsearch":
+		return core.TypeText, core.FormatPeernetSearch
 
-    default:
-        return core.TypeBinary, core.FormatBinary
-    }
+	default:
+		return core.TypeBinary, core.FormatBinary
+	}
 }
 
 // HTTPContentTypeToCore translates the HTTP content type to the File Type and File Format used by the core package.
 func HTTPContentTypeToCore(httpContentType string) (fileType, fileFormat uint16) {
-    switch httpContentType {
-    case "text/html", "application/xhtml+xml", "application/xml":
-        return core.TypeText, core.FormatHTML
+	switch httpContentType {
+	case "text/html", "application/xhtml+xml", "application/xml":
+		return core.TypeText, core.FormatHTML
 
-    case "text/plain":
-        return core.TypeText, core.FormatText
+	case "text/plain":
+		return core.TypeText, core.FormatText
 
-    case "text/csv", "text/tsv", "text/tab-separated-values", "text/x-csv", "application/csv", "application/x-csv", "text/x-comma-separated-values":
-        return core.TypeText, core.FormatCSV
+	case "text/csv", "text/tsv", "text/tab-separated-values", "text/x-csv", "application/csv", "application/x-csv", "text/x-comma-separated-values":
+		return core.TypeText, core.FormatCSV
 
-    case "application/pdf", "application/x-pdf":
-        return core.TypeDocument, core.FormatPDF
+	case "application/pdf", "application/x-pdf":
+		return core.TypeDocument, core.FormatPDF
 
-    case "application/msword", "application/rtf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.oasis.opendocument.text":
-        return core.TypeDocument, core.FormatWord
+	case "application/msword", "application/rtf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.oasis.opendocument.text":
+		return core.TypeDocument, core.FormatWord
 
-    case "application/excel", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.oasis.opendocument.spreadsheet":
-        return core.TypeDocument, core.FormatExcel
+	case "application/excel", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.oasis.opendocument.spreadsheet":
+		return core.TypeDocument, core.FormatExcel
 
-    case "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "application/vnd.oasis.opendocument.presentation":
-        return core.TypeDocument, core.FormatPowerpoint
+	case "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "application/vnd.oasis.opendocument.presentation":
+		return core.TypeDocument, core.FormatPowerpoint
 
-    case "image/png", "image/jpeg", "image/gif", "image/svg+xml", "image/tiff", "image/webp", "image/bmp", "image/x-bmp", "image/x-windows-bmp": // image/x-icon excluded
-        return core.TypePicture, core.FormatPicture
+	case "image/png", "image/jpeg", "image/gif", "image/svg+xml", "image/tiff", "image/webp", "image/bmp", "image/x-bmp", "image/x-windows-bmp": // image/x-icon excluded
+		return core.TypePicture, core.FormatPicture
 
-    case "audio/aac", "audio/midi", "audio/ogg", "audio/x-wav", "audio/webm", "audio/3gpp", "audio/3gpp2", "audio/mpeg", "audio/vorbis":
-        return core.TypeAudio, core.FormatAudio
+	case "audio/aac", "audio/midi", "audio/ogg", "audio/x-wav", "audio/webm", "audio/3gpp", "audio/3gpp2", "audio/mpeg", "audio/vorbis":
+		return core.TypeAudio, core.FormatAudio
 
-    case "video/x-msvideo", "video/x-ms-wmv", "video/mpeg", "video/ogg", "video/webm", "video/3gpp", "video/3gpp2", "video/x-flv", "video/mp4":
-        return core.TypeVideo, core.FormatVideo
+	case "video/x-msvideo", "video/x-ms-wmv", "video/mpeg", "video/ogg", "video/webm", "video/3gpp", "video/3gpp2", "video/x-flv", "video/mp4":
+		return core.TypeVideo, core.FormatVideo
 
-    case "application/zip", "application/x-rar-compressed", "application/x-tar", "application/x-bzip", "application/x-bzip2", "application/x-7z-compressed":
-        return core.TypeContainer, core.FormatContainer
+	case "application/zip", "application/x-rar-compressed", "application/x-tar", "application/x-bzip", "application/x-bzip2", "application/x-7z-compressed":
+		return core.TypeContainer, core.FormatContainer
 
-    case "application/epub+zip", "application/x-mobipocket-ebook":
-        return core.TypeEbook, core.FormatEbook
+	case "application/epub+zip", "application/x-mobipocket-ebook":
+		return core.TypeEbook, core.FormatEbook
 
-    default:
-        return core.TypeBinary, core.FormatBinary
-    }
+	default:
+		return core.TypeBinary, core.FormatBinary
+	}
 }
 
 // FileDataToHTTPContentType returns the HTTP content type based on the initial file data. It reads the first 512 bytes of the file.
 func FileDataToHTTPContentType(Path string) (httpContentType string, err error) {
-    file, err := os.Open(Path)
-    if err != nil {
-        return "", err
-    }
+	file, err := os.Open(Path)
+	if err != nil {
+		return "", err
+	}
 
-    // Read up to 512 bytes. This specific number comes from http.DetectContentType which specifies it as constant "sniffLen".
-    buff := make([]byte, 512)
+	// Read up to 512 bytes. This specific number comes from http.DetectContentType which specifies it as constant "sniffLen".
+	buff := make([]byte, 512)
 
-    if _, err := file.Read(buff); err != nil {
-        return "", err
-    }
+	if _, err := file.Read(buff); err != nil {
+		return "", err
+	}
 
-    if err := file.Close(); err != nil {
-        return "", err
-    }
+	if err := file.Close(); err != nil {
+		return "", err
+	}
 
-    httpContentType = http.DetectContentType(buff)
+	httpContentType = http.DetectContentType(buff)
 
-    // sanitize it first
-    httpContentType = strings.ToLower(strings.TrimSpace(httpContentType))
-    if indexD := strings.IndexAny(httpContentType, ";"); indexD >= 0 {
-        httpContentType = httpContentType[:indexD]
-    }
+	// sanitize it first
+	httpContentType = strings.ToLower(strings.TrimSpace(httpContentType))
+	if indexD := strings.IndexAny(httpContentType, ";"); indexD >= 0 {
+		httpContentType = httpContentType[:indexD]
+	}
 
-    return httpContentType, nil
+	return httpContentType, nil
 }
 
 // FileDetectType detects the File Type and File Format of a file. It uses the extension if available, otherwise the file data, for detection.
 func FileDetectType(Path string) (fileType, fileFormat uint16, err error) {
-    // If a file extension is available, use that to detect the file type and file format.
-    // Otherwise, use the initial file data for detection.
-    if ext1, _, valid := PathToExtension(Path); valid {
-        fileType, fileFormat = FileTranslateExtension(ext1)
-        return fileType, fileFormat, nil
-    }
+	// If a file extension is available, use that to detect the file type and file format.
+	// Otherwise, use the initial file data for detection.
+	if ext1, _, valid := PathToExtension(Path); valid {
+		fileType, fileFormat = FileTranslateExtension(ext1)
+		return fileType, fileFormat, nil
+	}
 
-    httpContentType, err := FileDataToHTTPContentType(Path)
-    if err != nil {
-        return core.TypeBinary, core.FormatBinary, err
-    }
+	httpContentType, err := FileDataToHTTPContentType(Path)
+	if err != nil {
+		return core.TypeBinary, core.FormatBinary, err
+	}
 
-    fileType, fileFormat = HTTPContentTypeToCore(httpContentType)
-    return fileType, fileFormat, nil
+	fileType, fileFormat = HTTPContentTypeToCore(httpContentType)
+	return fileType, fileFormat, nil
 }
 
 type apiResponseFileFormat struct {
-    Status     int    `json:"status"`     // Status: 0 = Success, 1 = Error reading file
-    FileType   uint16 `json:"filetype"`   // File Type.
-    FileFormat uint16 `json:"fileformat"` // File Format.
+	Status     int    `json:"status"`     // Status: 0 = Success, 1 = Error reading file
+	FileType   uint16 `json:"filetype"`   // File Type.
+	FileFormat uint16 `json:"fileformat"` // File Format.
 }
 
 /*
@@ -207,18 +212,108 @@ Request:    GET /file/format?path=[file path on disk]
 Result:     200 with JSON structure apiResponseFileFormat
 */
 func (api *WebapiInstance) apiFileFormat(w http.ResponseWriter, r *http.Request) {
-    r.ParseForm()
-    filePath := r.Form.Get("path")
-    if filePath == "" {
-        http.Error(w, "", http.StatusBadRequest)
-        return
-    }
+	r.ParseForm()
+	filePath := r.Form.Get("path")
+	if filePath == "" {
+		http.Error(w, "", http.StatusBadRequest)
+		return
+	}
 
-    fileType, fileFormat, err := FileDetectType(filePath)
-    if err != nil {
-        EncodeJSON(api.Backend, w, r, apiResponseFileFormat{Status: 1})
-        return
-    }
+	fileType, fileFormat, err := FileDetectType(filePath)
+	if err != nil {
+		EncodeJSON(api.Backend, w, r, apiResponseFileFormat{Status: 1})
+		return
+	}
 
-    EncodeJSON(api.Backend, w, r, apiResponseFileFormat{Status: 0, FileType: fileType, FileFormat: fileFormat})
+	EncodeJSON(api.Backend, w, r, apiResponseFileFormat{Status: 0, FileType: fileType, FileFormat: fileFormat})
+}
+
+/*
+apiFileAdd TODO add documentation
+Request:    GET /file/add?path=[file path on disk]
+*/
+
+func (api *WebapiInstance) apiFileAdd(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	filePath := r.Form.Get("path")
+	if filePath == "" {
+		EncodeJSON(api.Backend, w, r, apiResponseFileFormat{Status: 1})
+		http.Error(w, "", http.StatusBadRequest)
+		return
+	}
+
+	fileType, fileFormat, err := FileDetectType(filePath)
+	if err != nil {
+		EncodeJSON(api.Backend, w, r, apiResponseFileFormat{Status: 1})
+		return
+	}
+
+	hash, status, err := api.Backend.UserWarehouse.CreateFileFromPath(filePath)
+
+	if err != nil {
+		EncodeJSON(api.Backend, w, r, apiResponseFileFormat{Status: 1})
+		api.Backend.LogError("warehouse.CreateFile", "status %d error: %v", status, err)
+		return
+	}
+
+	var filesAdd []blockchain.BlockRecordFile
+
+	fileName := filepath.Base(filePath) //use this built-in function to obtain filename
+
+	var file apiFile
+	file.Hash = hash
+	file.Name = fileName
+	file.ID = uuid.New()
+	file.Format = fileFormat
+	file.Type = uint8(fileType)
+
+	//for _, file := range input.Files {
+	if len(file.Hash) != protocol.HashSize {
+		api.Backend.LogError("blockchain.AddFile", "error: %v", "file length is not the same length as "+
+			"the protocol hash size.")
+		http.Error(w, "", http.StatusBadRequest)
+		return
+	}
+	if file.ID == uuid.Nil { // if the ID is not provided by the caller, set it
+		file.ID = uuid.New()
+	}
+
+	// Verify that the file exists in the warehouse. Folders are exempt from this check as they are only virtual.
+	if !file.IsVirtualFolder() {
+		if _, err := warehouse.ValidateHash(file.Hash); err != nil {
+			api.Backend.LogError("blockchain.AddFile", "error: %v", err)
+			http.Error(w, "", http.StatusBadRequest)
+			return
+		} else if _, fileSize, status, _ := api.Backend.UserWarehouse.FileExists(file.Hash); status != warehouse.StatusOK {
+			EncodeJSON(api.Backend, w, r, apiResponseFileFormat{Status: 1})
+			return
+		} else {
+			file.Size = fileSize
+		}
+	} else {
+		file.Hash = protocol.HashData(nil)
+		file.Size = 0
+	}
+
+	blockRecord := blockRecordFileFromAPI(file)
+
+	// Set the merkle tree info as appropriate.
+	if !setFileMerkleInfo(api.Backend, &blockRecord) {
+		EncodeJSON(api.Backend, w, r, apiResponseFileFormat{Status: 1})
+		return
+	}
+
+	filesAdd = append(filesAdd, blockRecord)
+	//}
+
+	newHeight, newVersion, status := api.Backend.UserBlockchain.AddFiles(filesAdd)
+
+	// Temporary log to check the output for warehouse API
+	api.Backend.LogError("blockchain.AddFile", "output %v", apiBlockchainBlockStatus{Status: status, Height: newHeight, Version: newVersion})
+
+	EncodeJSON(api.Backend, w, r, apiBlockchainBlockStatus{Status: status, Height: newHeight, Version: newVersion})
+
+	//
+	//
+	//EncodeJSON(api.Backend, w, r, apiResponseFileFormat{Status: 0, FileType: fileType, FileFormat: fileFormat})
 }

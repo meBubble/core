@@ -106,6 +106,7 @@ func Start(Backend *core.Backend, ListenAddresses []string, UseSSL bool, Certifi
 	api.Router.HandleFunc("/search/terminate", api.apiSearchTerminate).Methods("GET")
 	api.Router.HandleFunc("/explore", api.apiExplore).Methods("GET")
 	api.Router.HandleFunc("/file/format", api.apiFileFormat).Methods("GET")
+	api.Router.HandleFunc("/file/add", api.apiFileAdd).Methods("GET")
 	api.Router.HandleFunc("/download/start", api.apiDownloadStart).Methods("GET")
 	api.Router.HandleFunc("/download/view", api.apiViewFile).Methods("GET")
 	api.Router.HandleFunc("/download/status", api.apiDownloadStatus).Methods("GET")
