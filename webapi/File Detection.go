@@ -131,7 +131,7 @@ func HTTPContentTypeToCore(httpContentType string) (fileType, fileFormat uint16)
 	case "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "application/vnd.oasis.opendocument.presentation":
 		return core.TypeDocument, core.FormatPowerpoint
 
-	case "image/png", "image/jpeg", "image/gif", "image/svg+xml", "image/tiff", "image/webp", "image/bmp", "image/x-bmp", "image/x-windows-bmp": // image/x-icon excluded
+	case "image/png", "image/jpeg", "image/jpg", "image/gif", "image/svg+xml", "image/tiff", "image/webp", "image/bmp", "image/x-bmp", "image/x-windows-bmp": // image/x-icon excluded
 		return core.TypePicture, core.FormatPicture
 
 	case "audio/aac", "audio/midi", "audio/ogg", "audio/x-wav", "audio/webm", "audio/3gpp", "audio/3gpp2", "audio/mpeg", "audio/vorbis":

@@ -4,14 +4,14 @@
 package networkInterface
 
 import (
-    "errors"
-    "fmt"
-    "inet.af/netaddr"
-    "log"
-    "net"
-    "net/netip"
-    "strings"
-    "tailscale.com/net/netmon"
+	"errors"
+	"fmt"
+	"inet.af/netaddr"
+	"log"
+	"net"
+	"net/netip"
+	"strings"
+	"tailscale.com/net/netmon"
 )
 
 // errVPNNotPrepared is used when VPNService.Builder.establish returns
@@ -34,93 +34,103 @@ var errMultipleUsers = errors.New("VPN cannot be created on this device due to a
 
 //var vpnService = &VpnService{}
 
-var Interface string
+var GlobalInterfaces []netmon.Interface
 
 // Report interfaces in the device in net.Interface format.
-func GetInterfaces(InterfaceParamter string) ([]netmon.Interface, error) {
-    var ifaces []netmon.Interface
+func InitInterfaces(InterfaceParameter string) error {
+	var ifaces []netmon.Interface
 
-    if Interface != "" {
-        Interface = InterfaceParamter
-    }
+	if InterfaceParameter == "" {
+		return errors.New("no InterfaceString")
+	}
 
-    //ifaceString, err := a.appCtx.GetInterfacesAsString()
-    //if err != nil {
-    //	return ifaces, err
-    //}
+	for _, iface := range strings.Split(InterfaceParameter, "\n") {
+		// Example of the strings we're processing:
+		// wlan0 30 1500 true true false false true | fe80::2f60:2c82:4163:8389%wlan0/64 10.1.10.131/24
+		// r_rmnet_data0 21 1500 true false false false false | fe80::9318:6093:d1ad:ba7f%r_rmnet_data0/64
+		// mnet_data2 12 1500 true false false false false | fe80::3c8c:44dc:46a9:9907%rmnet_data2/64
 
-    for _, iface := range strings.Split(Interface, "\n") {
-        // Example of the strings we're processing:
-        // wlan0 30 1500 true true false false true | fe80::2f60:2c82:4163:8389%wlan0/64 10.1.10.131/24
-        // r_rmnet_data0 21 1500 true false false false false | fe80::9318:6093:d1ad:ba7f%r_rmnet_data0/64
-        // mnet_data2 12 1500 true false false false false | fe80::3c8c:44dc:46a9:9907%rmnet_data2/64
+		if strings.TrimSpace(iface) == "" {
+			continue
+		}
 
-        if strings.TrimSpace(iface) == "" {
-            continue
-        }
+		fields := strings.Split(iface, "|")
+		if len(fields) != 2 {
+			log.Printf("getInterfaces: unable to split %q", iface)
+			continue
+		}
 
-        fields := strings.Split(iface, "|")
-        if len(fields) != 2 {
-            log.Printf("getInterfaces: unable to split %q", iface)
-            continue
-        }
+		var name string
+		var index, mtu int
+		var up, broadcast, loopback, pointToPoint, multicast bool
+		_, err := fmt.Sscanf(fields[0], "%s %d %d %t %t %t %t %t",
+			&name, &index, &mtu, &up, &broadcast, &loopback, &pointToPoint, &multicast)
+		if err != nil {
+			log.Printf("getInterfaces: unable to parse %q: %v", iface, err)
+			continue
+		}
 
-        var name string
-        var index, mtu int
-        var up, broadcast, loopback, pointToPoint, multicast bool
-        _, err := fmt.Sscanf(fields[0], "%s %d %d %t %t %t %t %t",
-            &name, &index, &mtu, &up, &broadcast, &loopback, &pointToPoint, &multicast)
-        if err != nil {
-            log.Printf("getInterfaces: unable to parse %q: %v", iface, err)
-            continue
-        }
+		newIf := netmon.Interface{
+			Interface: &net.Interface{
+				Name:  name,
+				Index: index,
+				MTU:   mtu,
+			},
+			AltAddrs: []net.Addr{}, // non-nil to avoid Go using netlink
+		}
+		if up {
+			newIf.Flags |= net.FlagUp
+		}
+		if broadcast {
+			newIf.Flags |= net.FlagBroadcast
+		}
+		if loopback {
+			newIf.Flags |= net.FlagLoopback
+		}
+		if pointToPoint {
+			newIf.Flags |= net.FlagPointToPoint
+		}
+		if multicast {
+			newIf.Flags |= net.FlagMulticast
+		}
 
-        newIf := netmon.Interface{
-            Interface: &net.Interface{
-                Name:  name,
-                Index: index,
-                MTU:   mtu,
-            },
-            AltAddrs: []net.Addr{}, // non-nil to avoid Go using netlink
-        }
-        if up {
-            newIf.Flags |= net.FlagUp
-        }
-        if broadcast {
-            newIf.Flags |= net.FlagBroadcast
-        }
-        if loopback {
-            newIf.Flags |= net.FlagLoopback
-        }
-        if pointToPoint {
-            newIf.Flags |= net.FlagPointToPoint
-        }
-        if multicast {
-            newIf.Flags |= net.FlagMulticast
-        }
+		addrs := strings.Trim(fields[1], " \n")
+		for _, addr := range strings.Split(addrs, " ") {
+			ip, err := netaddr.ParseIPPrefix(addr)
+			if err == nil {
+				newIf.AltAddrs = append(newIf.AltAddrs, ip.IPNet())
+			}
+		}
 
-        addrs := strings.Trim(fields[1], " \n")
-        for _, addr := range strings.Split(addrs, " ") {
-            ip, err := netaddr.ParseIPPrefix(addr)
-            if err == nil {
-                newIf.AltAddrs = append(newIf.AltAddrs, ip.IPNet())
-            }
-        }
+		ifaces = append(ifaces, newIf)
+	}
 
-        ifaces = append(ifaces, newIf)
-    }
+	GlobalInterfaces = ifaces
 
-    return ifaces, nil
+	return nil
+}
+
+func GetInterfaces(InterfaceParameter string) ([]netmon.Interface, error) {
+	if InterfaceParameter == "" {
+		if len(GlobalInterfaces) != 0 {
+			return GlobalInterfaces, nil
+		} else {
+			return nil, errors.New("no global interfaces")
+		}
+	} else {
+		return nil, errors.New("no InterfaceString")
+	}
+	//log.Printf("getInterfaces:  %s", Interface)
 }
 
 // googleDNSServers are used on ChromeOS, where an empty VpnBuilder DNS setting results
 // in erasing the platform DNS servers. The developer docs say this is not supposed to happen,
 // but nonetheless it does.
 var googleDNSServers = []netip.Addr{
-    netip.MustParseAddr("8.8.8.8"),
-    netip.MustParseAddr("8.8.4.4"),
-    netip.MustParseAddr("2001:4860:4860::8888"),
-    netip.MustParseAddr("2001:4860:4860::8844"),
+	netip.MustParseAddr("8.8.8.8"),
+	netip.MustParseAddr("8.8.4.4"),
+	netip.MustParseAddr("2001:4860:4860::8888"),
+	netip.MustParseAddr("2001:4860:4860::8844"),
 }
 
 //func (b *backend) updateTUN(service IPNService, rcfg *router.Config, dcfg *dns.OSConfig) error {

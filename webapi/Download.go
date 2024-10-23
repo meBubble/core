@@ -125,7 +125,15 @@ func (api *WebapiInstance) apiViewFile(w http.ResponseWriter, r *http.Request) {
 	timeout := 10 * time.Second
 
 	if len(nodeID) != 0 {
+		if len(nodeID) != 0 {
+			api.Backend.LogError("apiViewFile", "NodeID: '%s'\n", hex.EncodeToString(nodeID))
+		} else {
+			api.Backend.LogError("apiViewFile", "NodeID == NIL\n")
+		}
 		peer, err = PeerConnectNode(api.Backend, nodeID, timeout)
+		if err != nil {
+		}
+		api.Backend.LogError("apiViewFile", "PeerConnectNode Error: '%v'\n", err.Error)
 	}
 
 	if err != nil {
@@ -139,15 +147,14 @@ func (api *WebapiInstance) apiViewFile(w http.ResponseWriter, r *http.Request) {
 	// start the reader
 	//reader, fileSize, transferSize, err := webapi.FileStartReader(peer, fileHash, uint64(offset), uint64(limit), r.Context().Done())
 	reader, _, transferSize, err := FileStartReader(peer, hash, uint64(offset), uint64(limit), r.Context().Done())
+
+	api.Backend.LogError("apiViewFile", "transferSize: '%d'\n", transferSize)
+
 	if reader != nil {
 		defer reader.Close()
 	}
 	if err != nil || reader == nil {
-		http.Error(w, "File not found.", http.StatusNotFound)
-		return
-	}
-
-	if err != nil || reader == nil {
+		api.Backend.LogError("apiViewFile", "FileStartReader error: 404 \n")
 		http.Error(w, "File not found.", http.StatusNotFound)
 		return
 	}

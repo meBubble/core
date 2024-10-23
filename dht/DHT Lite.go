@@ -11,6 +11,7 @@ package dht
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -176,6 +177,7 @@ func (dht *DHT) FindNode(key []byte) (node *Node, err error) {
 
 	result, ok := <-search.Results
 	if !ok { // Check if closed channel. Redundant with checking <-search.TerminateSignal.
+		fmt.Println("apiViewFile", "FindNode: search (away) for Node Error!\n")
 		return nil, nil
 	}
 	return result.TargetNode, nil

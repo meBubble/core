@@ -105,6 +105,7 @@ func (nets *Networks) networkChangeMonitor() {
 		time.Sleep(time.Second * changeMonitorFrequency)
 
 		interfaceList, err := networkInterface.GetInterfaces("")
+
 		if err != nil {
 			nets.backend.LogError("networkChangeMonitor", "enumerating network adapters failed: %s\n", err.Error())
 			continue
@@ -113,8 +114,11 @@ func (nets *Networks) networkChangeMonitor() {
 		ifacesNew := make(map[string][]net.Addr)
 
 		for _, iface := range interfaceList {
-			addressesNew, err := iface.Addrs()
-			if err != nil {
+
+			addressesNew := iface.AltAddrs //Addrs()
+			//nets.backend.LogError("networkChangeInterface", "new interface '%s' (%d IPs)\n", iface.Name, len(addressesNew))
+
+			if len(addressesNew) == 0 {
 				nets.backend.LogError("networkChangeMonitor", "enumerating IPs for network adapter '%s': %s\n", iface.Name, err.Error())
 				continue
 			}

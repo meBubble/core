@@ -163,7 +163,8 @@ func (backend *Backend) initLog() (err error) {
 		os.MkdirAll(directory, os.ModePerm)
 	}
 
-	logFile, err := os.OpenFile(backend.Config.LogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666) // 666 : All uses can read/write
+	logFile, err :=
+		os.OpenFile(backend.Config.LogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666) // 666 : All uses can read/write
 	if err != nil {
 		return err
 	}
