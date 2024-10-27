@@ -7,7 +7,6 @@ Author:     Peter Kleissner
 package warehouse
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/newinfoOffical/core/merkle"
 	"io"
@@ -218,14 +217,6 @@ func (wh *Warehouse) DeleteFile(hash []byte) (status int, err error) {
 
 // FileExists checks if the file exists. It returns StatusInvalidHash, StatusFileNotFound, or StatusOK.
 func (wh *Warehouse) FileExists(hash []byte) (path string, fileSize uint64, status int, err error) {
-	fmt.Println()
-	fmt.Print("FileExist Hash:")
-	if len(hash) != 0 {
-		fmt.Println(hex.EncodeToString(hash))
-	} else {
-		fmt.Println("FileExist: Hash is Empty!")
-	}
-	fmt.Println()
 	hashA, err := ValidateHash(hash)
 	if err != nil {
 		fmt.Println("FileExist: Hash INVALID!")
@@ -234,24 +225,14 @@ func (wh *Warehouse) FileExists(hash []byte) (path string, fileSize uint64, stat
 
 	a, b := buildPath(wh.Directory, hashA)
 	path = filepath.Join(a, b)
+
 	fmt.Print("WAREHOUSE: path for FILE from Warehouse: ")
 	fmt.Println(path)
 
-	// Android scoped storage blocks os.Stat so just open and see if it exist, returning filesize 0
-	//if fileInfo, err := os.Stat(path); err == nil {
-	if file, err := os.Open(path); err == nil {
+	if fileInfo, err := os.Stat(path); err == nil {
 		// file exists
-		//return path, uint64(fileInfo.Size()), StatusOK, nil
-		if err1 := file.Close(); err1 != nil {
-			fmt.Print("file close error: %v", err1.Error())
-		}
-
-		return path, uint64(0), StatusOK, nil
-	} else {
-		fmt.Print("FileExist: File does not EXIST: ")
-		fmt.Println(err.Error())
+		return path, uint64(fileInfo.Size()), StatusOK, nil
 	}
-
 	return "", 0, StatusFileNotFound, os.ErrNotExist
 }
 
