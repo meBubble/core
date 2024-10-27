@@ -125,15 +125,8 @@ func (api *WebapiInstance) apiViewFile(w http.ResponseWriter, r *http.Request) {
 	timeout := 10 * time.Second
 
 	if len(nodeID) != 0 {
-		if len(nodeID) != 0 {
-			api.Backend.LogError("apiViewFile", "NodeID: '%s'\n", hex.EncodeToString(nodeID))
-		} else {
-			api.Backend.LogError("apiViewFile", "NodeID == NIL\n")
-		}
 		peer, err = PeerConnectNode(api.Backend, nodeID, timeout)
-		if err != nil {
-		}
-		api.Backend.LogError("apiViewFile", "PeerConnectNode Error: '%v'\n", err.Error)
+
 	}
 
 	if err != nil {

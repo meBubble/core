@@ -60,9 +60,6 @@ func MobileMain(path string, Networkinterface string) {
 	} else {
 		fmt.Print("Connected")
 	}
-	/*http.HandleFunc("/test", ReceiveFile)
-	log.Fatal(http.ListenAndServe(":8080", nil))*/
-	//KotlinServer.RequestFile("")
 
 }
 

@@ -164,11 +164,14 @@ func (api *WebapiInstance) apiFileView(w http.ResponseWriter, r *http.Request) {
 	fileHash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
 	nodeID, valid2 := DecodeBlake3Hash(r.Form.Get("node"))
 	publicKey, err3 := core.PublicKeyFromPeerID(r.Form.Get("node"))
+
+	fmt.Println("hash & node valid? !!!!")
 	if !valid1 || (!valid2 && err3 != nil) {
 		http.Error(w, "", http.StatusBadRequest)
+		fmt.Println("hash & node NOT valid? !!!!")
 		return
 	}
-
+	fmt.Println("hash & node ARE valid !!!!")
 	timeoutSeconds, _ := strconv.Atoi(r.Form.Get("timeout"))
 	if timeoutSeconds == 0 {
 		timeoutSeconds = 10
