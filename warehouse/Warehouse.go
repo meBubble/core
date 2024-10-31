@@ -27,7 +27,10 @@ type Warehouse struct {
 // Init initializes the warehouse
 func Init(Directory string) (wh *Warehouse, err error) {
 	// The temp folder will always be a sub-folder named "_Temp"
-	wh = &Warehouse{Directory: Directory, Temp: filepath.Join(Directory, "_Temp")}
+	wh = &Warehouse{
+		Directory: Directory,
+		Temp:      filepath.Join(Directory, "_Temp"),
+	}
 
 	if err = createDirectory(wh.Directory); err != nil {
 		return nil, err

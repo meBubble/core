@@ -8,6 +8,7 @@ package webapi
 
 import (
 	"encoding/hex"
+	"fmt"
 	"io"
 	"math"
 	"net/http"
@@ -63,9 +64,18 @@ Result:     200 with JSON structure apiResponseDownloadStatus
 func (api *WebapiInstance) apiDownloadStart(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
+	testfilePath := r.Form.Get("path")
+
 	// validate hashes, must be blake3
 	hash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
 	nodeID, valid2 := DecodeBlake3Hash(r.Form.Get("node"))
+
+	if hash != nil && nodeID != nil {
+		api.Backend.LogError("Download.DownloadStart", "FILEPATH: %s, hash %s, nodeId %s", testfilePath, hex.EncodeToString(hash), hex.EncodeToString(nodeID))
+	} else {
+		fmt.Println("hash or nodeID is nil!")
+	}
+
 	if !valid1 || !valid2 {
 		http.Error(w, "", http.StatusBadRequest)
 		return
@@ -79,21 +89,23 @@ func (api *WebapiInstance) apiDownloadStart(w http.ResponseWriter, r *http.Reque
 
 	info := &downloadInfo{backend: api.Backend, api: api, id: uuid.New(), created: time.Now(), hash: hash, nodeID: nodeID}
 
-	api.Backend.LogError("Download.DownloadStart", "output %v", downloadInfo{backend: api.Backend, api: api, id: uuid.New(), created: time.Now(), hash: hash, nodeID: nodeID})
+	//api.Backend.LogError("Download.DownloadStart", "output %v", downloadInfo{backend: api.Backend, api: api, id: uuid.New(), created: time.Now(), hash: hash, nodeID: nodeID})
 
 	// create the file immediately
-	if info.initDiskFile(filePath) != nil {
+	if err := info.initDiskFile(filePath); err != nil {
 		EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseFileInvalid})
+		api.Backend.LogError("Download.DownloadStart", "initDiskFile ERROR: %v", err)
 		return
+	} else {
+		api.Backend.LogError("Download.DownloadStart", "initDiskFile successfull")
 	}
-
 	// add the download to the list
 	api.downloadAdd(info)
 
 	// start the download!
 	go info.Start()
 
-	api.Backend.LogError("Download.DownloadStart", "output %v", apiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.id, DownloadStatus: DownloadWaitMetadata})
+	//api.Backend.LogError("Download.DownloadStart", "output %v", apiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.id, DownloadStatus: DownloadWaitMetadata})
 
 	EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.id, DownloadStatus: DownloadWaitMetadata})
 }

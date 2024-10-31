@@ -50,6 +50,9 @@ func Init(UserAgent string, ConfigFilename string, Filters *Filters, ConfigOut i
 	if err = backend.initLog(); err != nil {
 		return nil, ExitErrorLogInit, err
 	}
+	if err = initDownloadFolder(ConfigFilename); err != nil {
+		return nil, ExitErrorDownloadFolder, err
+	}
 
 	backend.initFilters()
 	backend.initPeerID()
