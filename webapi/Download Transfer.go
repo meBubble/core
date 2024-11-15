@@ -9,194 +9,196 @@ Temporary download code to provide dummy results for testing. To be replaced!
 package webapi
 
 import (
-    "bytes"
-    "os"
-    "time"
+	"bytes"
+	"os"
+	"time"
 
-    "github.com/newinfoOffical/core/warehouse"
+	"github.com/newinfoOffical/core/warehouse"
 )
 
 // Starts the download.
 func (info *downloadInfo) Start() {
-    // current user?
-    if bytes.Equal(info.nodeID, info.backend.SelfNodeID()) {
-        info.DownloadSelf()
-        return
-    }
+	// current user?
+	if bytes.Equal(info.nodeID, info.backend.SelfNodeID()) {
+		info.DownloadSelf()
+		return
+	}
 
-    for n := 0; n < 3 && info.peer == nil; n++ {
-        _, info.peer, _ = info.backend.FindNode(info.nodeID, time.Second*5)
+	for n := 0; n < 3 && info.peer == nil; n++ {
+		_, info.peer, _ = info.backend.FindNode(info.nodeID, time.Second*5)
 
-        if info.status == DownloadCanceled {
-            return
-        }
-    }
+		if info.status == DownloadCanceled {
+			return
+		}
+	}
 
-    if info.peer != nil {
-        info.Download()
-    } else {
-        info.status = DownloadCanceled
-    }
+	if info.peer != nil {
+		info.Download()
+	} else {
+		info.status = DownloadCanceled
+	}
 }
 
 func (info *downloadInfo) Download() {
-    //fmt.Printf("Download start of %s\n", hex.EncodeToString(info.hash))
+	//fmt.Printf("Download start of %s\n", hex.EncodeToString(info.hash))
 
-    // try to download the entire file
-    reader, fileSize, transferSize, err := FileStartReader(info.peer, info.hash, 0, 0, nil)
-    if reader != nil {
-        defer reader.Close()
-    }
-    if err != nil {
-        info.status = DownloadCanceled
-        return
-    } else if fileSize != transferSize {
-        info.status = DownloadCanceled
-        return
-    }
+	// try to download the entire file
+	reader, fileSize, transferSize, err := FileStartReader(info.peer, info.hash, 0, 0, nil)
+	if reader != nil {
+		defer reader.Close()
+	}
+	if err != nil {
+		info.status = DownloadCanceled
+		return
+	} else if fileSize != transferSize {
+		info.status = DownloadCanceled
+		return
+	}
 
-    info.file.Size = fileSize
-    info.status = DownloadActive
+	info.file.Size = fileSize
+	info.status = DownloadActive
 
-    // download in a loop
-    var fileOffset, totalRead uint64
-    dataRemaining := fileSize
-    readSize := uint64(4096)
+	// download in a loop
+	var fileOffset, totalRead uint64
+	dataRemaining := fileSize
+	readSize := uint64(4096)
 
-    for dataRemaining > 0 {
-        //fmt.Printf("data remaining:  downloaded %d from total %d   = %d %%\n", totalRead, fileSize, totalRead*100/fileSize)
-        if dataRemaining < readSize {
-            readSize = dataRemaining
-        }
+	for dataRemaining > 0 {
+		//fmt.Printf("data remaining:  downloaded %d from total %d   = %d %%\n", totalRead, fileSize, totalRead*100/fileSize)
+		if dataRemaining < readSize {
+			readSize = dataRemaining
+		}
 
-        data := make([]byte, readSize)
-        n, err := reader.Read(data)
+		data := make([]byte, readSize)
+		n, err := reader.Read(data)
 
-        totalRead += uint64(n)
-        dataRemaining -= uint64(n)
-        data = data[:n]
+		totalRead += uint64(n)
+		dataRemaining -= uint64(n)
+		data = data[:n]
 
-        if err != nil {
-            info.status = DownloadCanceled
-            return
-        }
+		if err != nil {
+			info.status = DownloadCanceled
+			return
+		}
 
-        info.storeDownloadData(data[:n], fileOffset)
+		info.storeDownloadData(data[:n], fileOffset)
 
-        fileOffset += uint64(n)
-    }
+		fileOffset += uint64(n)
+	}
 
-    //fmt.Printf("data finished:  downloaded %d from total %d   = %d %%\n", totalRead, fileSize, totalRead*100/fileSize)
+	//fmt.Printf("data finished:  downloaded %d from total %d   = %d %%\n", totalRead, fileSize, totalRead*100/fileSize)
 
-    info.Finish()
-    info.DeleteDefer(time.Hour * 1) // cache the details for 1 hour before removing
+	info.Finish()
+	// To be created as a sub function to be added to a Merkle tree.
+	//info.backend.UserWarehouse.CreateMerkleCompanionFile(info.path)
+	info.DeleteDefer(time.Hour * 1) // cache the details for 1 hour before removing
 }
 
 // Pause pauses the download. Status is DownloadResponseX.
 func (info *downloadInfo) Pause() (status int) {
-    info.Lock()
-    defer info.Unlock()
+	info.Lock()
+	defer info.Unlock()
 
-    if info.status != DownloadActive { // The download must be active to be paused.
-        return DownloadResponseActionInvalid
-    }
+	if info.status != DownloadActive { // The download must be active to be paused.
+		return DownloadResponseActionInvalid
+	}
 
-    info.status = DownloadPause
+	info.status = DownloadPause
 
-    return DownloadResponseSuccess
+	return DownloadResponseSuccess
 }
 
 // Resume resumes the download. Status is DownloadResponseX.
 func (info *downloadInfo) Resume() (status int) {
-    info.Lock()
-    defer info.Unlock()
+	info.Lock()
+	defer info.Unlock()
 
-    if info.status != DownloadPause { // The download must be paused to resume.
-        return DownloadResponseActionInvalid
-    }
+	if info.status != DownloadPause { // The download must be paused to resume.
+		return DownloadResponseActionInvalid
+	}
 
-    info.status = DownloadActive
+	info.status = DownloadActive
 
-    return DownloadResponseSuccess
+	return DownloadResponseSuccess
 }
 
 // Cancel cancels the download. Status is DownloadResponseX.
 func (info *downloadInfo) Cancel() (status int) {
-    info.Lock()
-    defer info.Unlock()
+	info.Lock()
+	defer info.Unlock()
 
-    if info.status >= DownloadCanceled { // The download must not be already canceled or finished.
-        return DownloadResponseActionInvalid
-    }
+	if info.status >= DownloadCanceled { // The download must not be already canceled or finished.
+		return DownloadResponseActionInvalid
+	}
 
-    info.status = DownloadCanceled
-    info.DiskFile.Handle.Close()
+	info.status = DownloadCanceled
+	info.DiskFile.Handle.Close()
 
-    return DownloadResponseSuccess
+	return DownloadResponseSuccess
 }
 
 // Finish marks the download as finished.
 func (info *downloadInfo) Finish() (status int) {
-    info.Lock()
-    defer info.Unlock()
+	info.Lock()
+	defer info.Unlock()
 
-    if info.status != DownloadActive { // The download must be active.
-        return DownloadResponseActionInvalid
-    }
+	if info.status != DownloadActive { // The download must be active.
+		return DownloadResponseActionInvalid
+	}
 
-    info.status = DownloadFinished
-    info.DiskFile.Handle.Close()
+	info.status = DownloadFinished
+	info.DiskFile.Handle.Close()
 
-    return DownloadResponseSuccess
+	return DownloadResponseSuccess
 }
 
 // initDiskFile creates the target file
 func (info *downloadInfo) initDiskFile(path string) (err error) {
-    info.DiskFile.Name = path
-    info.DiskFile.Handle, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666) // 666 : All uses can read/write
+	info.DiskFile.Name = path
+	info.DiskFile.Handle, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666) // 666 : All uses can read/write
 
-    return err
+	return err
 }
 
 // storeDownloadData stores downloaded data. It does not change the download status.
 func (info *downloadInfo) storeDownloadData(data []byte, offset uint64) (status int) {
-    info.Lock()
-    defer info.Unlock()
+	info.Lock()
+	defer info.Unlock()
 
-    if info.status != DownloadActive { // The download must be active.
-        return DownloadResponseActionInvalid
-    }
+	if info.status != DownloadActive { // The download must be active.
+		return DownloadResponseActionInvalid
+	}
 
-    if _, err := info.DiskFile.Handle.WriteAt(data, int64(offset)); err != nil {
-        return DownloadResponseFileWrite
-    }
+	if _, err := info.DiskFile.Handle.WriteAt(data, int64(offset)); err != nil {
+		return DownloadResponseFileWrite
+	}
 
-    info.DiskFile.StoredSize += uint64(len(data))
+	info.DiskFile.StoredSize += uint64(len(data))
 
-    return DownloadResponseSuccess
+	return DownloadResponseSuccess
 }
 
 func (info *downloadInfo) DownloadSelf() {
-    // Check if the file is available in the local warehouse.
-    _, fileSize, status, _ := info.backend.UserWarehouse.FileExists(info.hash)
-    if status != warehouse.StatusOK {
-        info.status = DownloadCanceled
-        return
-    }
+	// Check if the file is available in the local warehouse.
+	_, fileSize, status, _ := info.backend.UserWarehouse.FileExists(info.hash)
+	if status != warehouse.StatusOK {
+		info.status = DownloadCanceled
+		return
+	}
 
-    info.file.Size = fileSize
-    info.status = DownloadActive
+	info.file.Size = fileSize
+	info.status = DownloadActive
 
-    // read the file
-    status, bytesRead, _ := info.backend.UserWarehouse.ReadFile(info.hash, 0, int64(info.file.Size), info.DiskFile.Handle)
+	// read the file
+	status, bytesRead, _ := info.backend.UserWarehouse.ReadFile(info.hash, 0, int64(info.file.Size), info.DiskFile.Handle)
 
-    info.DiskFile.StoredSize = uint64(bytesRead)
+	info.DiskFile.StoredSize = uint64(bytesRead)
 
-    if status != warehouse.StatusOK {
-        info.status = DownloadCanceled
-        return
-    }
+	if status != warehouse.StatusOK {
+		info.status = DownloadCanceled
+		return
+	}
 
-    info.Finish()
-    info.DeleteDefer(time.Hour * 1) // cache the details for 1 hour before removing}
+	info.Finish()
+	info.DeleteDefer(time.Hour * 1) // cache the details for 1 hour before removing}
 }

@@ -120,6 +120,7 @@ func Start(Backend *core.Backend, ListenAddresses []string, UseSSL bool, Certifi
 	api.Router.HandleFunc("/warehouse/delete", api.apiWarehouseDeleteFile).Methods("GET")
 	api.Router.HandleFunc("/file/read", api.apiFileRead).Methods("GET")
 	api.Router.HandleFunc("/file/view", api.apiFileView).Methods("GET")
+	api.Router.HandleFunc("/file/share", api.apiFileShare).Methods("GET")
 
 	for _, listen := range ListenAddresses {
 		go startWebAPI(Backend, listen, UseSSL, CertificateFile, CertificateKey, api.Router, "API", TimeoutRead, TimeoutWrite)

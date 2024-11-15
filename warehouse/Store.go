@@ -88,7 +88,7 @@ func (wh *Warehouse) CreateFile(data io.Reader, fileSize uint64, uploadStatus io
 	}
 
 	// Destination
-	pathFull, err := wh.createFilePath(hash)
+	pathFull, err := wh.CreateFilePath(hash)
 	if err != nil {
 		os.Remove(tmpFileName)
 		return nil, StatusErrorCreatePath, err
@@ -111,7 +111,7 @@ func (wh *Warehouse) CreateFile(data io.Reader, fileSize uint64, uploadStatus io
 
 		// create the merkle tree companion file
 		if fileSize == 0 || fileSize > merkle.MinimumFragmentSize {
-			if status, err = wh.createMerkleCompanionFile(pathFull); status != StatusOK {
+			if status, err = wh.CreateMerkleCompanionFile(pathFull); status != StatusOK {
 				return hash, status, err
 			}
 		}
