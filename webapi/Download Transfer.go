@@ -17,7 +17,7 @@ import (
 )
 
 // Starts the download.
-func (info *downloadInfo) Start() {
+func (info *downloadInfo) Start(share bool) {
 	// current user?
 	if bytes.Equal(info.nodeID, info.backend.SelfNodeID()) {
 		info.DownloadSelf()
@@ -33,13 +33,13 @@ func (info *downloadInfo) Start() {
 	}
 
 	if info.peer != nil {
-		info.Download()
+		info.Download(share)
 	} else {
 		info.status = DownloadCanceled
 	}
 }
 
-func (info *downloadInfo) Download() {
+func (info *downloadInfo) Download(share bool) {
 	//fmt.Printf("Download start of %s\n", hex.EncodeToString(info.hash))
 
 	// try to download the entire file
@@ -89,8 +89,27 @@ func (info *downloadInfo) Download() {
 	//fmt.Printf("data finished:  downloaded %d from total %d   = %d %%\n", totalRead, fileSize, totalRead*100/fileSize)
 
 	info.Finish()
-	// To be created as a sub function to be added to a Merkle tree.
-	//info.backend.UserWarehouse.CreateMerkleCompanionFile(info.path)
+
+	// Download complete if the share flag is stated. Then to create a Merkle Tree
+	// and to add a blockchain entry.
+	if share {
+		// To be created as a sub function to be added to a Merkle tree.
+		info.backend.UserWarehouse.CreateMerkleCompanionFile(info.path)
+
+		// invoke explore helper to get blockchain metadata from
+		// global cache.
+		// hardcoded limit to be changed to search all if
+		// a limit of -1 is provided
+		resultFiles := info.api.queryRecentShared(info.backend, -1, uint64(1000*20/100), 0, uint64(1000), info.nodeID, true, info.hash)
+
+		for i, _ := range resultFiles {
+			resultFiles[i].NodeID = info.backend.SelfNodeID()
+			// Add the file to the blockchain
+		}
+		// Add file to the blockchain
+		info.backend.UserBlockchain.AddFiles(resultFiles)
+	}
+
 	info.DeleteDefer(time.Hour * 1) // cache the details for 1 hour before removing
 }
 
