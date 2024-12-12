@@ -10,7 +10,6 @@ package webapi
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"time"
@@ -19,13 +18,13 @@ import (
 )
 
 // Starts the download.
-func (info *downloadInfo) Start() {
+func (info *downloadInfo) Start(share bool) {
 	// current user?
 	if bytes.Equal(info.nodeID, info.backend.SelfNodeID()) {
 		info.DownloadSelf()
 		return
 	}
-	fmt.Printf("Download started...")
+
 	for n := 0; n < 3 && info.peer == nil; n++ {
 		_, info.peer, _ = info.backend.FindNode(info.nodeID, time.Second*5)
 
@@ -37,30 +36,24 @@ func (info *downloadInfo) Start() {
 	}
 
 	if info.peer != nil {
-		info.Download()
+		info.Download(share)
 	} else {
 		info.status = DownloadCanceled
 	}
 }
 
-func (info *downloadInfo) Download() {
-	if (info.hash != nil) || (len(info.hash) != 0) {
-		fmt.Printf("Download start of %s\n", hex.EncodeToString(info.hash))
-	} else {
-		fmt.Println("Download hash is nil/0")
-	}
+func (info *downloadInfo) Download(share bool) {
+	//fmt.Printf("Download start of %s\n", hex.EncodeToString(info.hash))
+
 	// try to download the entire file
 	reader, fileSize, transferSize, err := FileStartReader(info.peer, info.hash, 0, 0, nil)
 	if reader != nil {
-		fmt.Println("reader is nil")
 		defer reader.Close()
 	}
 	if err != nil {
-		fmt.Println("FileReader Error")
 		info.status = DownloadCanceled
 		return
 	} else if fileSize != transferSize {
-		fmt.Println("Transfersize error")
 		info.status = DownloadCanceled
 		return
 	}
@@ -96,9 +89,33 @@ func (info *downloadInfo) Download() {
 		fileOffset += uint64(n)
 	}
 
-	fmt.Printf("data finished:  downloaded %d from total %d   = %d %%\n", totalRead, fileSize, totalRead*100/fileSize)
+	//fmt.Printf("data finished:  downloaded %d from total %d   = %d %%\n", totalRead, fileSize, totalRead*100/fileSize)
 
 	info.Finish()
+
+	// Download complete if the share flag is stated. Then to create a Merkle Tree
+	// and to add a blockchain entry.
+	if share {
+		// To be created as a sub function to be added to a Merkle tree.
+		info.backend.UserWarehouse.CreateMerkleCompanionFile(info.path)
+
+		// invoke explore helper to get blockchain metadata from
+		// global cache.
+		// hardcoded limit to be changed to search all if
+		// a limit of -1 is provided
+		resultFiles := info.api.queryRecentShared(info.backend, -1, uint64(1000*20/100), 0, uint64(1000), info.nodeID, true, info.hash)
+
+		for i, _ := range resultFiles {
+			// the source of the file
+			resultFiles[i].SrcNodeID = resultFiles[i].NodeID
+			// the new owner of the downloaded file
+			resultFiles[i].NodeID = info.backend.SelfNodeID()
+			// Add the file to the blockchain
+		}
+		// Add file to the blockchain
+		info.backend.UserBlockchain.AddFiles(resultFiles)
+	}
+
 	info.DeleteDefer(time.Hour * 1) // cache the details for 1 hour before removing
 }
 
@@ -188,7 +205,6 @@ func (info *downloadInfo) storeDownloadData(data []byte, offset uint64) (status 
 
 func (info *downloadInfo) DownloadSelf() {
 	// Check if the file is available in the local warehouse.
-	fmt.Printf("DownloadSelf !!!")
 	_, fileSize, status, _ := info.backend.UserWarehouse.FileExists(info.hash)
 	if status != warehouse.StatusOK {
 		info.status = DownloadCanceled

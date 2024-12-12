@@ -11,19 +11,21 @@ import (
 	"time"
 )
 
-func MobileMain(path string, Networkinterface string) {
+func MobileMain(path string, Networkinterface string) (ret string) {
 	// LockOSThread wires the calling goroutine to its current operating system thread.
 	runtime.LockOSThread()
 
 	// Parsing the network interface got as a string from the app
 	if Networkinterface == "" {
 		print("networkInterface string empty \n")
+		ret = "networkInterface string empty"
 		return
 	}
 	err := networkInterface.InitInterfaces(Networkinterface)
 
 	if err != nil {
 		print("networkInterface", "parsing error: %s\n", err.Error())
+		ret = "networkInterface error"
 		return
 	}
 
@@ -46,6 +48,7 @@ func MobileMain(path string, Networkinterface string) {
 	backendInit, status, err := core.Init("Your application/1.0", path+"Config.yaml", nil, nil)
 	if status != core.ExitSuccess {
 		fmt.Printf("Error %d initializing config: %s\n", status, err.Error())
+		ret = "initializing config error"
 		return
 	}
 
@@ -57,10 +60,14 @@ func MobileMain(path string, Networkinterface string) {
 	// Checks if the go code can access the internet
 	if !connected() {
 		fmt.Print("Not connected to the internet ")
+		ret = "not connected to internet "
+		return
 	} else {
 		fmt.Print("Connected")
-	}
 
+	}
+	ret = "backend successfully started"
+	return
 }
 
 func connected() (ok bool) {

@@ -393,6 +393,8 @@ func (api *WebapiInstance) apiExplore(w http.ResponseWriter, r *http.Request) {
 func (api *WebapiInstance) ExploreHelper(fileType int, limit, offset int, nodeID []byte, nodeIDState bool) *SearchResult {
 	resultFiles := api.queryRecentShared(api.Backend, fileType, uint64(limit*20/100), uint64(offset), uint64(limit), nodeID, nodeIDState)
 
+	api.Backend.LogError("Explore result list-length is: ", "%d: ", len(resultFiles))
+
 	var result SearchResult
 	result.Files = []apiFile{}
 

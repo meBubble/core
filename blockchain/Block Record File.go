@@ -47,6 +47,7 @@ type BlockRecordFile struct {
 	Format         uint16               // File Format
 	Size           uint64               // Size of the file data
 	NodeID         []byte               // Node ID, owner of the file
+	SrcNodeID      []byte               // Node ID, of the source of the file, sho added
 	Tags           []BlockRecordFileTag // Tags provide additional metadata
 	Username       string               // Username of the User who uploaded the file
 	ProfilePicture []byte               // UserProfile phone
@@ -61,7 +62,7 @@ type BlockRecordFileTag struct {
 	// This is an embedded basic compression algorithm for repetitive tag. For example directory tags or album tags might be heavily repetitive among files.
 }
 
-const blockRecordFileMinSize = 101
+const blockRecordFileMinSize = 101 + 32 // plus 32 for SrcNodeID
 
 // decodeBlockRecordFiles decodes only file records. Other records are ignored.
 func decodeBlockRecordFiles(recordsRaw []BlockRecordRaw, nodeID []byte) (files []BlockRecordFile, err error) {
@@ -85,9 +86,13 @@ func decodeBlockRecordFiles(recordsRaw []BlockRecordRaw, nodeID []byte) (files [
 			file.Format = binary.LittleEndian.Uint16(record.Data[89 : 89+2])
 			file.Size = binary.LittleEndian.Uint64(record.Data[91 : 91+8])
 
-			countTags := binary.LittleEndian.Uint16(record.Data[99 : 99+2])
+			// ScrcNoodeID decoding
+			file.SrcNodeID = make([]byte, 32)           // 32 byte same as NodeID
+			copy(file.SrcNodeID, record.Data[99:99+32]) // add 32 bytes
 
-			index := blockRecordFileMinSize
+			countTags := binary.LittleEndian.Uint16(record.Data[99+32 : 99+2+32]) //add 32 bytes
+
+			index := blockRecordFileMinSize // added 32 bytes to in the definition above
 
 			for n := uint16(0); n < countTags; n++ {
 				if index+6 > len(record.Data) {
@@ -181,6 +186,9 @@ func encodeBlockRecordFiles(files []BlockRecordFile) (recordsRaw []BlockRecordRa
 		binary.LittleEndian.PutUint16(data[89:89+2], files[n].Format)
 		binary.LittleEndian.PutUint64(data[91:91+8], files[n].Size)
 
+		// adding `SrcNodeID` (new field)
+		copy(data[99:99+32], files[n].SrcNodeID[:]) // Offset 99 → length 32 Bytes for SrcNodeID
+
 		var tagCount uint16
 
 		for _, tag := range files[n].Tags {
@@ -206,8 +214,8 @@ func encodeBlockRecordFiles(files []BlockRecordFile) (recordsRaw []BlockRecordRa
 			data = append(data, tempTag[:]...)
 			data = append(data, tag.Data...)
 		}
-
-		binary.LittleEndian.PutUint16(data[99:99+2], tagCount)
+		// SrcNodeId offset added
+		binary.LittleEndian.PutUint16(data[99+32:99+2+32], tagCount) // ad offset 32 for tagcount
 
 		recordsRaw = append(recordsRaw, BlockRecordRaw{Type: RecordTypeFile, Data: data})
 	}

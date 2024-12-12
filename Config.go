@@ -140,7 +140,14 @@ func (backend *Backend) SaveConfig() {
 		backend.LogError("SaveConfig", "writing config '%s': %v\n", backend.ConfigFilename, err.Error())
 	}
 }
-
+func initDownloadFolder(filepath string) (err error) {
+	directory, _ := path.Split(filepath)
+	downloadfolder := directory + "/download"
+	if _, err = os.Stat(downloadfolder); err != nil && os.IsNotExist(err) {
+		err = os.MkdirAll(downloadfolder, os.ModePerm)
+	}
+	return err
+}
 func (backend *Backend) configUpdateSeedList() {
 	// parse the embedded config
 	var configD Config
