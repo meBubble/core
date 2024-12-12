@@ -103,7 +103,7 @@ func (api *WebapiInstance) apiDownloadStart(w http.ResponseWriter, r *http.Reque
 	api.downloadAdd(info)
 
 	// start the download!
-	go info.Start()
+	go info.Start(true)
 
 	//api.Backend.LogError("Download.DownloadStart", "output %v", apiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.id, DownloadStatus: DownloadWaitMetadata})
 
