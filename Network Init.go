@@ -11,16 +11,14 @@ package core
 
 import (
 	"errors"
-	"github.com/meBubble/core/mobile/networkInterface"
 	"math/rand"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
-	"tailscale.com/net/netmon"
 	"time"
 
-	"github.com/meBubble/core/btcec"
+	"github.com/newinfoOffical/core/btcec"
 )
 
 // networkWire is an incoming packet
@@ -85,14 +83,15 @@ func (backend *Backend) initNetwork() {
 	// * Packet duplicates on IPv6 Multicast (listening on multiple IPs and joining the group on the same adapter) and IPv4 Broadcast (listening on multiple IPs on the same adapter).
 	// * Local peers are more likely to connect on the same adapter via multiple IPs (i.e. link-local and others, including public IPv6 and temporary public IPv6).
 	// * Network adapters and IPs might change. Simplest case is if someone changes Wifi network.
-	interfaceList, err := networkInterface.GetInterfaces("")
+	interfaceList, err := net.Interfaces()
 	if err != nil {
 		backend.LogError("initNetwork", "enumerating network adapters failed: %s\n", err.Error())
 		return
 	}
+
 	for _, iface := range interfaceList {
-		addresses := iface.AltAddrs
-		if len(addresses) == 0 {
+		addresses, err := iface.Addrs()
+		if err != nil {
 			backend.LogError("initNetwork", "enumerating IPs for network adapter '%s': %s\n", iface.Name, err.Error())
 			continue
 		}
@@ -104,7 +103,7 @@ func (backend *Backend) initNetwork() {
 }
 
 // InterfaceStart will start the listeners on all the IP addresses for the network
-func (nets *Networks) InterfaceStart(iface netmon.Interface, addresses []net.Addr) (networksNew []*Network) {
+func (nets *Networks) InterfaceStart(iface net.Interface, addresses []net.Addr) (networksNew []*Network) {
 	for _, address := range addresses {
 		net1 := address.(*net.IPNet)
 

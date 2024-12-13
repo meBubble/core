@@ -7,24 +7,22 @@ Author:     Peter Kleissner
 package core
 
 import (
-	"github.com/meBubble/core/mobile/networkInterface"
 	"net"
 	"strings"
-	"tailscale.com/net/netmon"
 	"time"
 )
 
 // FindInterfaceByIP finds an interface based on the IP. The IP must be available at the interface.
-func FindInterfaceByIP(ip net.IP) (iface *netmon.Interface, ipnet *net.IPNet) {
-	interfaceList, err := networkInterface.GetInterfaces("")
+func FindInterfaceByIP(ip net.IP) (iface *net.Interface, ipnet *net.IPNet) {
+	interfaceList, err := net.Interfaces()
 	if err != nil {
 		return nil, nil
 	}
 
 	// iterate through all interfaces
 	for _, ifaceSingle := range interfaceList {
-		addresses := ifaceSingle.AltAddrs
-		if len(addresses) == 0 {
+		addresses, err := ifaceSingle.Addrs()
+		if err != nil {
 			continue
 		}
 
@@ -44,7 +42,7 @@ func FindInterfaceByIP(ip net.IP) (iface *netmon.Interface, ipnet *net.IPNet) {
 // NetworkListIPs returns a list of all IPs
 func NetworkListIPs() (IPs []net.IP, err error) {
 
-	interfaceList, err := networkInterface.Interfaces()
+	interfaceList, err := net.Interfaces()
 	if err != nil {
 		return nil, err
 	}
@@ -104,8 +102,7 @@ func (nets *Networks) networkChangeMonitor() {
 	for {
 		time.Sleep(time.Second * changeMonitorFrequency)
 
-		interfaceList, err := networkInterface.GetInterfaces("")
-
+		interfaceList, err := net.Interfaces()
 		if err != nil {
 			nets.backend.LogError("networkChangeMonitor", "enumerating network adapters failed: %s\n", err.Error())
 			continue
@@ -114,11 +111,8 @@ func (nets *Networks) networkChangeMonitor() {
 		ifacesNew := make(map[string][]net.Addr)
 
 		for _, iface := range interfaceList {
-
-			addressesNew := iface.AltAddrs //Addrs()
-			//nets.backend.LogError("networkChangeInterface", "new interface '%s' (%d IPs)\n", iface.Name, len(addressesNew))
-
-			if len(addressesNew) == 0 {
+			addressesNew, err := iface.Addrs()
+			if err != nil {
 				nets.backend.LogError("networkChangeMonitor", "enumerating IPs for network adapter '%s': %s\n", iface.Name, err.Error())
 				continue
 			}
@@ -173,7 +167,7 @@ func (nets *Networks) networkChangeMonitor() {
 }
 
 // networkChangeInterfaceNew is called when a new interface is detected
-func (nets *Networks) networkChangeInterfaceNew(iface netmon.Interface, addresses []net.Addr) {
+func (nets *Networks) networkChangeInterfaceNew(iface net.Interface, addresses []net.Addr) {
 	nets.backend.LogError("networkChangeInterfaceNew", "new interface '%s' (%d IPs)\n", iface.Name, len(addresses))
 
 	networksNew := nets.InterfaceStart(iface, addresses)
@@ -220,7 +214,7 @@ func (nets *Networks) networkChangeInterfaceRemove(iface string, addresses []net
 }
 
 // networkChangeIPNew is called when an existing interface lists a new IP
-func (nets *Networks) networkChangeIPNew(iface netmon.Interface, address net.Addr) {
+func (nets *Networks) networkChangeIPNew(iface net.Interface, address net.Addr) {
 	nets.backend.LogError("networkChangeIPNew", "new interface '%s' IP %s\n", iface.Name, address.String())
 
 	networksNew := nets.InterfaceStart(iface, []net.Addr{address})
@@ -233,7 +227,7 @@ func (nets *Networks) networkChangeIPNew(iface netmon.Interface, address net.Add
 }
 
 // networkChangeIPRemove is called when an existing interface removes an IP
-func (nets *Networks) networkChangeIPRemove(iface netmon.Interface, address net.Addr) {
+func (nets *Networks) networkChangeIPRemove(iface net.Interface, address net.Addr) {
 	nets.RLock()
 	defer nets.RUnlock()
 
