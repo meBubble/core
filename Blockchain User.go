@@ -10,8 +10,8 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/newinfoOffical/core/blockchain"
-	"github.com/newinfoOffical/core/btcec"
+	"github.com/meBubble/core/blockchain"
+	"github.com/meBubble/core/btcec"
 )
 
 // initUserBlockchain initializes the users blockchain. It creates the blockchain file if it does not exist already.

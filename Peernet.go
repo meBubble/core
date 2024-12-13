@@ -9,13 +9,13 @@ package core
 import (
 	"sync"
 
-	"github.com/newinfoOffical/core/blockchain"
-	"github.com/newinfoOffical/core/btcec"
-	"github.com/newinfoOffical/core/dht"
-	"github.com/newinfoOffical/core/protocol"
-	"github.com/newinfoOffical/core/search"
-	"github.com/newinfoOffical/core/store"
-	"github.com/newinfoOffical/core/warehouse"
+	"github.com/meBubble/core/blockchain"
+	"github.com/meBubble/core/btcec"
+	"github.com/meBubble/core/dht"
+	"github.com/meBubble/core/protocol"
+	"github.com/meBubble/core/search"
+	"github.com/meBubble/core/store"
+	"github.com/meBubble/core/warehouse"
 )
 
 // Init initializes the client. If the config file does not exist or is empty, a default one will be created.

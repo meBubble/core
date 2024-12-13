@@ -8,7 +8,6 @@ package webapi
 
 import (
 	"encoding/hex"
-	"fmt"
 	"io"
 	"math"
 	"net/http"
@@ -18,7 +17,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/newinfoOffical/core"
+	"github.com/meBubble/core"
 )
 
 type apiResponseDownloadStatus struct {
@@ -58,24 +57,19 @@ const (
 apiDownloadStart starts the download of a file. The path is the full path on disk to store the file.
 The hash parameter identifies the file to download. The node ID identifies the blockchain (i.e., the "owner" of the file).
 
-Request:    GET /download/start?path=[target path on disk]&hash=[file hash to download]&node=[node ID]
+Request:    GET /download/start?path=[target path on disk]&hash=[file hash to download]&node=[node ID]&share="true"
 Result:     200 with JSON structure apiResponseDownloadStatus
 */
 func (api *WebapiInstance) apiDownloadStart(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
-	testfilePath := r.Form.Get("path")
+	var err error
+	// Sets sharing a file to default false.
+	shareState := false
 
 	// validate hashes, must be blake3
 	hash, valid1 := DecodeBlake3Hash(r.Form.Get("hash"))
 	nodeID, valid2 := DecodeBlake3Hash(r.Form.Get("node"))
-
-	if hash != nil && nodeID != nil {
-		api.Backend.LogError("Download.DownloadStart", "FILEPATH: %s, hash %s, nodeId %s", testfilePath, hex.EncodeToString(hash), hex.EncodeToString(nodeID))
-	} else {
-		fmt.Println("hash or nodeID is nil!")
-	}
-
 	if !valid1 || !valid2 {
 		http.Error(w, "", http.StatusBadRequest)
 		return
@@ -87,25 +81,35 @@ func (api *WebapiInstance) apiDownloadStart(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	share := r.Form.Get("share")
+
 	info := &downloadInfo{backend: api.Backend, api: api, id: uuid.New(), created: time.Now(), hash: hash, nodeID: nodeID}
 
-	//api.Backend.LogError("Download.DownloadStart", "output %v", downloadInfo{backend: api.Backend, api: api, id: uuid.New(), created: time.Now(), hash: hash, nodeID: nodeID})
+	api.Backend.LogError("Download.DownloadStart", "output %v", downloadInfo{backend: api.Backend, api: api, id: uuid.New(), created: time.Now(), hash: hash, nodeID: nodeID})
+
+	if share == "true" {
+		// Creates the path to warehouse based on the hash provided
+		filePath, err = api.Backend.UserWarehouse.CreateFilePath(hash)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		shareState = true
+	}
 
 	// create the file immediately
-	if err := info.initDiskFile(filePath); err != nil {
+	if info.initDiskFile(filePath) != nil {
 		EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseFileInvalid})
-		api.Backend.LogError("Download.DownloadStart", "initDiskFile ERROR: %v", err)
 		return
-	} else {
-		api.Backend.LogError("Download.DownloadStart", "initDiskFile successfull")
 	}
+
 	// add the download to the list
 	api.downloadAdd(info)
 
 	// start the download!
-	go info.Start(true)
+	go info.Start(shareState)
 
-	//api.Backend.LogError("Download.DownloadStart", "output %v", apiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.id, DownloadStatus: DownloadWaitMetadata})
+	api.Backend.LogError("Download.DownloadStart", "output %v", apiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.id, DownloadStatus: DownloadWaitMetadata})
 
 	EncodeJSON(api.Backend, w, r, apiResponseDownloadStatus{APIStatus: DownloadResponseSuccess, ID: info.id, DownloadStatus: DownloadWaitMetadata})
 }
@@ -272,6 +276,7 @@ type downloadInfo struct {
 		Handle     *os.File // Target file (on disk) to store downloaded data
 		StoredSize uint64   // Count of bytes downloaded and stored in the file
 	}
+	path string
 
 	Swarm struct { // Information about the swarm. Only valid for status >= DownloadActive.
 		CountPeers uint64 // Count of peers participating in the swarm.

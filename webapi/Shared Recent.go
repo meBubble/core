@@ -6,15 +6,16 @@ Author:     Peter Kleissner
 package webapi
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 
-	"github.com/newinfoOffical/core"
-	"github.com/newinfoOffical/core/blockchain"
+	"github.com/meBubble/core"
+	"github.com/meBubble/core/blockchain"
 )
 
 // queryRecentShared returns recently shared files on the network from random peers until the limit is reached.
-func (api *WebapiInstance) queryRecentShared(backend *core.Backend, fileType int, limitPeer, offsetTotal, limitTotal uint64, nodeID []byte, nodeIDState bool) (files []blockchain.BlockRecordFile) {
+func (api *WebapiInstance) queryRecentShared(backend *core.Backend, fileType int, limitPeer, offsetTotal, limitTotal uint64, nodeID []byte, nodeIDState bool, hash []byte) (files []blockchain.BlockRecordFile) {
 	if limitPeer == 0 {
 		limitPeer = 1
 	}
@@ -95,6 +96,11 @@ func (api *WebapiInstance) queryRecentShared(backend *core.Backend, fileType int
 
 						if offsetTotal > 0 {
 							offsetTotal--
+							continue
+						}
+
+						// Check if the hash of the files does not match
+						if hash != nil && !bytes.Equal(file.Hash, hash) {
 							continue
 						}
 

@@ -7,7 +7,7 @@ Author:     Peter Kleissner
 package core
 
 import (
-	"github.com/newinfoOffical/core/mobile/networkInterface"
+	"github.com/meBubble/core/mobile/networkInterface"
 	"net"
 	"strings"
 	"tailscale.com/net/netmon"

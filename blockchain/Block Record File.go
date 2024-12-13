@@ -34,7 +34,7 @@ import (
 	"math"
 
 	"github.com/google/uuid"
-	"github.com/newinfoOffical/core/protocol"
+	"github.com/meBubble/core/protocol"
 )
 
 // BlockRecordFile is the metadata of a file published on the blockchain

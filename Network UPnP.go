@@ -9,183 +9,183 @@ Currently only supports IPv4 networks.
 package core
 
 import (
-    "math/rand"
-    "net"
-    "time"
+	"math/rand"
+	"net"
+	"time"
 
-    "github.com/newinfoOffical/core/upnp"
+	"github.com/meBubble/core/upnp"
 )
 
 func (nets *Networks) startUPnP() {
-    nets.upnpListInterfaces = make(map[string]struct{})
+	nets.upnpListInterfaces = make(map[string]struct{})
 
-    for _, cidr := range []string{
-        "10.0.0.0/8",     // RFC1918
-        "172.16.0.0/12",  // RFC1918
-        "192.168.0.0/16", // RFC1918
-    } {
-        if _, block, err := net.ParseCIDR(cidr); err == nil {
-            privateIPv4Blocks = append(privateIPv4Blocks, block)
-        }
-    }
+	for _, cidr := range []string{
+		"10.0.0.0/8",     // RFC1918
+		"172.16.0.0/12",  // RFC1918
+		"192.168.0.0/16", // RFC1918
+	} {
+		if _, block, err := net.ParseCIDR(cidr); err == nil {
+			privateIPv4Blocks = append(privateIPv4Blocks, block)
+		}
+	}
 
-    if nets.backend.Config.PortForward > 0 {
-        nets.backend.Config.EnableUPnP = false
-    }
-    if !nets.backend.Config.EnableUPnP {
-        return
-    }
+	if nets.backend.Config.PortForward > 0 {
+		nets.backend.Config.EnableUPnP = false
+	}
+	if !nets.backend.Config.EnableUPnP {
+		return
+	}
 
-    for _, network := range nets.networks4 {
-        go network.upnpAuto()
-    }
+	for _, network := range nets.networks4 {
+		go network.upnpAuto()
+	}
 }
 
 // upnpIsEligible checks if the network is eligible for UPnP
 func (network *Network) upnpIsEligible() bool {
-    // IPv4 only for now.
-    if !IsIPv4(network.address.IP) {
-        return false
-    }
+	// IPv4 only for now.
+	if !IsIPv4(network.address.IP) {
+		return false
+	}
 
-    // The network interface must be known which indicates that the IP address is NOT a wildcard.
-    // Port forwarding requires to specify a local IP. In case of listening on a wildcard that would not be known and guessing (looking at you btcd) is not a solution.
-    if network.iface == nil || network.address.IP.IsUnspecified() {
-        return false
-    }
+	// The network interface must be known which indicates that the IP address is NOT a wildcard.
+	// Port forwarding requires to specify a local IP. In case of listening on a wildcard that would not be known and guessing (looking at you btcd) is not a solution.
+	if network.iface == nil || network.address.IP.IsUnspecified() {
+		return false
+	}
 
-    // IPv4/IPv6: No link-local addresses, no loopback. Multicast would be invalid anyway.
-    if network.address.IP.IsLinkLocalUnicast() || network.address.IP.IsLoopback() || network.address.IP.IsMulticast() {
-        return false
-    }
+	// IPv4/IPv6: No link-local addresses, no loopback. Multicast would be invalid anyway.
+	if network.address.IP.IsLinkLocalUnicast() || network.address.IP.IsLoopback() || network.address.IP.IsMulticast() {
+		return false
+	}
 
-    // IPv4: Must be private IP.
-    if IsIPv4(network.address.IP) && !isPrivateIP(network.address.IP) {
-        return false
-    }
+	// IPv4: Must be private IP.
+	if IsIPv4(network.address.IP) && !isPrivateIP(network.address.IP) {
+		return false
+	}
 
-    return true
+	return true
 }
 
 var privateIPv4Blocks []*net.IPNet
 
 func isPrivateIP(ip net.IP) bool {
-    for _, block := range privateIPv4Blocks {
-        if block.Contains(ip) {
-            return true
-        }
-    }
-    return false
+	for _, block := range privateIPv4Blocks {
+		if block.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }
 
 // upnpAuto runs a UPnP daemon to forward the port, refresh the forwarding and continuously monitor if the forwarding remains valid.
 func (network *Network) upnpAuto() {
-    if !network.backend.Config.EnableUPnP || !network.upnpIsEligible() {
-        return
-    }
+	if !network.backend.Config.EnableUPnP || !network.upnpIsEligible() {
+		return
+	}
 
-    nat, err := upnp.Discover(network.address.IP)
-    if err != nil {
-        return
-    }
+	nat, err := upnp.Discover(network.address.IP)
+	if err != nil {
+		return
+	}
 
-    network.nat = nat
+	network.nat = nat
 
-    externalIP, err := nat.GetExternalAddress()
-    if err != nil {
-        return
-    }
+	externalIP, err := nat.GetExternalAddress()
+	if err != nil {
+		return
+	}
 
-    network.ipExternal = externalIP
+	network.ipExternal = externalIP
 
-    // Only allow 1 UPnP worker at a time for registering the adapter.
-    network.networkGroup.upnpMutex.Lock()
-    defer network.networkGroup.upnpMutex.Unlock()
+	// Only allow 1 UPnP worker at a time for registering the adapter.
+	network.networkGroup.upnpMutex.Lock()
+	defer network.networkGroup.upnpMutex.Unlock()
 
-    // If there is already a running UPnP on the adapter, skip.
-    if _, ok := network.networkGroup.upnpListInterfaces[network.GetAdapterName()]; ok {
-        return
-    }
+	// If there is already a running UPnP on the adapter, skip.
+	if _, ok := network.networkGroup.upnpListInterfaces[network.GetAdapterName()]; ok {
+		return
+	}
 
-    if err := network.upnpTryPortForward(); err != nil {
-        return
-    }
+	if err := network.upnpTryPortForward(); err != nil {
+		return
+	}
 
-    network.networkGroup.upnpListInterfaces[network.GetAdapterName()] = struct{}{}
+	network.networkGroup.upnpListInterfaces[network.GetAdapterName()] = struct{}{}
 
-    go network.upnpMonitorPortForward()
+	go network.upnpMonitorPortForward()
 }
 
 // upnpMonitorPortForward monitors the port forwarding status
 func (network *Network) upnpMonitorPortForward() {
-    ticker := time.NewTicker(time.Second * 10)
+	ticker := time.NewTicker(time.Second * 10)
 
 monitorLoop:
-    for {
-        select {
-        case <-ticker.C:
-        case <-network.terminateSignal:
-            // Remove port mapping. Note that in case the network is unavailable this is likely to fail.
-            network.nat.DeletePortMapping("UDP", network.portExternal)
+	for {
+		select {
+		case <-ticker.C:
+		case <-network.terminateSignal:
+			// Remove port mapping. Note that in case the network is unavailable this is likely to fail.
+			network.nat.DeletePortMapping("UDP", network.portExternal)
 
-            network.portExternal = 0
-            network.ipExternal = net.IP{}
+			network.portExternal = 0
+			network.ipExternal = net.IP{}
 
-            break monitorLoop
-        }
+			break monitorLoop
+		}
 
-        // 3 tries
-        var err error
-        for n := 0; n < 3; n++ {
-            if err = network.upnpValidate(); err == nil {
-                continue monitorLoop
-            }
-        }
+		// 3 tries
+		var err error
+		for n := 0; n < 3; n++ {
+			if err = network.upnpValidate(); err == nil {
+				continue monitorLoop
+			}
+		}
 
-        // invalid :(
-        network.backend.LogError("upnpMonitorPortForward", "port forwarding invalidated for local IP %s (adapter %s) external IP %s port %d\n", network.address.String(), network.iface.Name, network.ipExternal.String(), network.portExternal)
+		// invalid :(
+		network.backend.LogError("upnpMonitorPortForward", "port forwarding invalidated for local IP %s (adapter %s) external IP %s port %d\n", network.address.String(), network.iface.Name, network.ipExternal.String(), network.portExternal)
 
-        network.portExternal = 0
-        network.ipExternal = net.IP{}
+		network.portExternal = 0
+		network.ipExternal = net.IP{}
 
-        break
-    }
+		break
+	}
 
-    ticker.Stop()
+	ticker.Stop()
 
-    network.networkGroup.upnpMutex.Lock()
-    delete(network.networkGroup.upnpListInterfaces, network.GetAdapterName())
-    network.networkGroup.upnpMutex.Unlock()
+	network.networkGroup.upnpMutex.Lock()
+	delete(network.networkGroup.upnpListInterfaces, network.GetAdapterName())
+	network.networkGroup.upnpMutex.Unlock()
 }
 
 func (network *Network) upnpTryPortForward() (err error) {
-    // Try forwarding the port. First to the same one listening, otherwise random.
-    mappedExternalPort, err := network.nat.AddPortMapping("UDP", network.address.IP, uint16(network.address.Port), uint16(network.address.Port), "Peernet", 0)
-    if err != nil {
-        mappedExternalPort, err = network.nat.AddPortMapping("UDP", network.address.IP, uint16(network.address.Port), uint16(randInt(1024, 65535)), "Peernet", 0)
-    }
-    if err != nil {
-        return err
-    }
+	// Try forwarding the port. First to the same one listening, otherwise random.
+	mappedExternalPort, err := network.nat.AddPortMapping("UDP", network.address.IP, uint16(network.address.Port), uint16(network.address.Port), "Peernet", 0)
+	if err != nil {
+		mappedExternalPort, err = network.nat.AddPortMapping("UDP", network.address.IP, uint16(network.address.Port), uint16(randInt(1024, 65535)), "Peernet", 0)
+	}
+	if err != nil {
+		return err
+	}
 
-    // validate
-    if err := network.upnpValidate(); err != nil {
-        return err
-    }
+	// validate
+	if err := network.upnpValidate(); err != nil {
+		return err
+	}
 
-    // valid!
-    network.portExternal = mappedExternalPort
+	// valid!
+	network.portExternal = mappedExternalPort
 
-    return nil
+	return nil
 }
 
 func randInt(min int, max int) int {
-    return min + rand.Intn(max-min)
+	return min + rand.Intn(max-min)
 }
 
 func (network *Network) upnpValidate() (err error) {
-    // TODO: Send special message which validates the UPnP mapping
-    return nil
+	// TODO: Send special message which validates the UPnP mapping
+	return nil
 }
 
 // TODO: Function to check if there is an existing port forward

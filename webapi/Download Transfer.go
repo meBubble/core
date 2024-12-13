@@ -14,7 +14,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/newinfoOffical/core/warehouse"
+	"github.com/meBubble/core/warehouse"
 )
 
 // Starts the download.
@@ -97,7 +97,10 @@ func (info *downloadInfo) Download(share bool) {
 	// and to add a blockchain entry.
 	if share {
 		// To be created as a sub function to be added to a Merkle tree.
-		info.backend.UserWarehouse.CreateMerkleCompanionFile(info.path)
+		_, err := info.backend.UserWarehouse.CreateMerkleCompanionFile(info.path)
+		if err != nil {
+			return
+		}
 
 		// invoke explore helper to get blockchain metadata from
 		// global cache.

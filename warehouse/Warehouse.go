@@ -78,8 +78,8 @@ func (wh *Warehouse) tempFile() (file *os.File, err error) {
 	return
 }
 
-// createFilePath creates the file path for the specified hash and returns the full file path
-func (wh *Warehouse) createFilePath(hash []byte) (pathFull string, err error) {
+// CreateFilePath creates the file path for the specified hash and returns the full file path
+func (wh *Warehouse) CreateFilePath(hash []byte) (pathFull string, err error) {
 	path, filename := buildPath(wh.Directory, hex.EncodeToString(hash))
 	return filepath.Join(path, filename), createDirectory(path)
 }
