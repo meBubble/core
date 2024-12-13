@@ -183,15 +183,6 @@ func (backend *Backend) initLog() (err error) {
 	return nil
 }
 
-func initDownloadFolder(filepath string) (err error) {
-	directory, _ := path.Split(filepath)
-	downloadfolder := directory + "/download"
-	if _, err = os.Stat(downloadfolder); err != nil && os.IsNotExist(err) {
-		err = os.MkdirAll(downloadfolder, os.ModePerm)
-	}
-	return err
-}
-
 // Logs an error message.
 func (backend *Backend) LogError(function, format string, v ...interface{}) {
 	switch backend.Config.LogTarget {
