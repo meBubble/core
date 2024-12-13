@@ -18,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/newinfoOffical/core/btcec"
+	"github.com/meBubble/core/btcec"
 )
 
 // networkWire is an incoming packet
