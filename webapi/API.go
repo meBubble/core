@@ -18,7 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	"github.com/newinfoOffical/core"
+	"github.com/meBubble/core"
 )
 
 type WebapiInstance struct {

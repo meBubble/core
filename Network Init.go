@@ -11,7 +11,7 @@ package core
 
 import (
 	"errors"
-	"github.com/newinfoOffical/core/mobile/networkInterface"
+	"github.com/meBubble/core/mobile/networkInterface"
 	"math/rand"
 	"net"
 	"strconv"
@@ -20,7 +20,7 @@ import (
 	"tailscale.com/net/netmon"
 	"time"
 
-	"github.com/newinfoOffical/core/btcec"
+	"github.com/meBubble/core/btcec"
 )
 
 // networkWire is an incoming packet

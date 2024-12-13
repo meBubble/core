@@ -15,9 +15,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/newinfoOffical/core/btcec"
-	"github.com/newinfoOffical/core/dht"
-	"github.com/newinfoOffical/core/protocol"
+	"github.com/meBubble/core/btcec"
+	"github.com/meBubble/core/dht"
+	"github.com/meBubble/core/protocol"
 )
 
 func (backend *Backend) initPeerID() {

@@ -10,10 +10,11 @@ package webapi
 
 import (
 	"bytes"
+	"github.com/meBubble/core/blockchain"
 	"os"
 	"time"
 
-	"github.com/newinfoOffical/core/warehouse"
+	"github.com/meBubble/core/warehouse"
 )
 
 // Starts the download.
@@ -101,10 +102,26 @@ func (info *downloadInfo) Download(share bool) {
 		// hardcoded limit to be changed to search all if
 		// a limit of -1 is provided
 		resultFiles := info.api.queryRecentShared(info.backend, -1, uint64(1000*20/100), 0, uint64(1000), info.nodeID, true, info.hash)
-
 		for i, _ := range resultFiles {
-			// The original user who added this file to the blockchain
-			resultFiles[i].OriginNodeID = resultFiles[i].NodeID
+			// track if the file has a tag source NodeID
+			SourceNodeID := false
+			// tracking to check if the tag
+			for _, tag := range resultFiles[i].Tags {
+				if blockchain.TagSourceNodeID == tag.Type {
+					SourceNodeID = true
+				}
+			}
+			// if the source node ID is not found
+			// we add the source node ID to trace
+			// the initial Node which uploaded the
+			// file.
+			if !SourceNodeID {
+				var SourceRecord blockchain.BlockRecordFileTag
+				SourceRecord.Type = blockchain.TagSourceNodeID
+				SourceRecord.Data = resultFiles[i].NodeID
+				resultFiles[i].Tags = append(resultFiles[i].Tags, SourceRecord)
+			}
+
 			// The shared version of the file pointing to the new NodeID
 			resultFiles[i].NodeID = info.backend.SelfNodeID()
 		}

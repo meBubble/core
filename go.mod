@@ -1,4 +1,4 @@
-module github.com/newinfoOffical/core
+module github.com/meBubble/core
 
 go 1.23
 

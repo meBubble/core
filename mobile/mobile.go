@@ -3,9 +3,9 @@ package mobile
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/newinfoOffical/core"
-	"github.com/newinfoOffical/core/mobile/networkInterface"
-	"github.com/newinfoOffical/core/webapi"
+	"github.com/meBubble/core"
+	"github.com/meBubble/core/mobile/networkInterface"
+	"github.com/meBubble/core/webapi"
 	"net/http"
 	"runtime"
 	"time"

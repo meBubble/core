@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/newinfoOffical/core"
+	"github.com/meBubble/core"
 )
 
 type apiResponseDownloadStatus struct {

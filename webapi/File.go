@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/newinfoOffical/core"
-	"github.com/newinfoOffical/core/blockchain"
-	"github.com/newinfoOffical/core/merkle"
-	"github.com/newinfoOffical/core/protocol"
-	"github.com/newinfoOffical/core/warehouse"
+	"github.com/meBubble/core"
+	"github.com/meBubble/core/blockchain"
+	"github.com/meBubble/core/merkle"
+	"github.com/meBubble/core/protocol"
+	"github.com/meBubble/core/warehouse"
 )
 
 // apiFileMetadata contains metadata information.
@@ -44,7 +44,8 @@ type apiFile struct {
 	Description    string            `json:"description"`    // Description. This is expected to be multiline and contain hashtags!
 	Date           time.Time         `json:"date"`           // Date shared
 	NodeID         []byte            `json:"nodeid"`         // Node ID, owner of the file. Read only.
-	OriginalNodeID []byte            `json:"originalnodeid"` // OriginalNodeID, original owner of the file. Read only. This field would exist if the file was shared in the network.
+	SrcNodeID      []byte            `json:"srcnodeid"`      // Srcnodeid, original owner of the file. Read only. This field would exist if the file was shared in the network.
+	SrcNodeIDHex   string            `json:"srcnodeidhex"`   // SrcnodeidHEX, original owner of the file in the form of hex value
 	NodeIDHex      string            `json:"nodeidhex"`      // Node ID HEX, owner of the file in the form of hex value
 	Metadata       []apiFileMetadata `json:"metadata"`       // Additional metadata.
 	Username       string            `json:"username"`       // Username of the user who uploaded the file
@@ -54,7 +55,7 @@ type apiFile struct {
 // --- conversion from core to API data ---
 // Currently in a Hacky way for quick generalised filters
 func blockRecordFileToAPI(input blockchain.BlockRecordFile, localNode bool) (output apiFile) {
-	output = apiFile{ID: input.ID, Hash: input.Hash, HashHex: hex.EncodeToString(input.Hash), NodeID: input.NodeID, OriginalNodeID: input.OriginNodeID, NodeIDHex: hex.EncodeToString(input.NodeID), Type: input.Type, Format: input.Format, Size: input.Size, Username: input.Username, ProfilePicture: input.ProfilePicture, Metadata: []apiFileMetadata{}}
+	output = apiFile{ID: input.ID, Hash: input.Hash, HashHex: hex.EncodeToString(input.Hash), NodeID: input.NodeID, NodeIDHex: hex.EncodeToString(input.NodeID), Type: input.Type, Format: input.Format, Size: input.Size, Username: input.Username, ProfilePicture: input.ProfilePicture, Metadata: []apiFileMetadata{}}
 
 	NumberOfNodesShared := false
 
@@ -83,6 +84,10 @@ func blockRecordFileToAPI(input blockchain.BlockRecordFile, localNode bool) (out
 
 		case blockchain.TagSharedByGeoIP:
 			output.Metadata = append(output.Metadata, apiFileMetadata{Type: tag.Type, Name: "Shared By GeoIP", Text: tag.Text()})
+
+		case blockchain.TagSourceNodeID:
+			output.SrcNodeID = tag.Data
+			output.SrcNodeIDHex = hex.EncodeToString(tag.Data)
 
 		default:
 			output.Metadata = append(output.Metadata, apiFileMetadata{Type: tag.Type, Blob: tag.Data})

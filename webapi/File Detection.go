@@ -8,16 +8,16 @@ package webapi
 
 import (
 	"github.com/google/uuid"
-	"github.com/newinfoOffical/core/blockchain"
-	"github.com/newinfoOffical/core/protocol"
-	"github.com/newinfoOffical/core/warehouse"
+	"github.com/meBubble/core/blockchain"
+	"github.com/meBubble/core/protocol"
+	"github.com/meBubble/core/warehouse"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
-	"github.com/newinfoOffical/core"
+	"github.com/meBubble/core"
 )
 
 // PathToExtension translates a path to a file extension, if possible. It also returns the second file extension if there is one (relevant for files like "test.tar.gz").

@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/newinfoOffical/core/merkle"
+	"github.com/meBubble/core/merkle"
 )
 
 // Merkle companion files are created to store the entire merkle tree for files that are bigger than the minimum fragment size.

@@ -14,8 +14,8 @@ import (
 	"tailscale.com/net/netmon"
 	"time"
 
-	"github.com/newinfoOffical/core/protocol"
-	"github.com/newinfoOffical/core/upnp"
+	"github.com/meBubble/core/protocol"
+	"github.com/meBubble/core/upnp"
 )
 
 // Network is a connection adapter through one network interface (adapter).

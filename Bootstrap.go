@@ -20,8 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/newinfoOffical/core/btcec"
-	"github.com/newinfoOffical/core/protocol"
+	"github.com/meBubble/core/btcec"
+	"github.com/meBubble/core/protocol"
 )
 
 // rootPeer is a single root peer info

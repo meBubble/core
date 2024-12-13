@@ -23,6 +23,7 @@ const (
 	TagDateCreated   = 4 // Date when the file was originally created. This may differ from the date in the block record, which indicates when the file was shared.
 	TagSharedByCount = 5 // Count of peers that share the file. Virtual.
 	TagSharedByGeoIP = 6 // GeoIP data of peers that are sharing the file. CSV encoded with header "latitude,longitude". Virtual.
+	TagSourceNodeID  = 7 // Tracks the source Node ID who uploaded the file
 )
 
 // Future tags to be defined for audio/video: Artist, Album, Title, Length, Bitrate, Codec
