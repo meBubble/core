@@ -103,8 +103,10 @@ func (info *downloadInfo) Download(share bool) {
 		resultFiles := info.api.queryRecentShared(info.backend, -1, uint64(1000*20/100), 0, uint64(1000), info.nodeID, true, info.hash)
 
 		for i, _ := range resultFiles {
+			// The original user who added this file to the blockchain
+			resultFiles[i].OriginNodeID = resultFiles[i].NodeID
+			// The shared version of the file pointing to the new NodeID
 			resultFiles[i].NodeID = info.backend.SelfNodeID()
-			// Add the file to the blockchain
 		}
 		// Add file to the blockchain
 		info.backend.UserBlockchain.AddFiles(resultFiles)

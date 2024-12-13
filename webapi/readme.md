@@ -855,7 +855,7 @@ This starts the download of a file. The path is the full path on disk to store t
 The hash parameter identifies the file to download. The node ID identifies the blockchain (i.e., the "owner" of the file). The hash and node must be hex-encoded.
 
 ```
-Request:    GET /download/start?path=[target path on disk]&hash=[file hash to download]&node=[node ID]&hash="true"
+Request:    GET /download/start?path=[target path on disk]&hash=[file hash to download]&node=[node ID]&hash="true   "
 Result:     200 with JSON structure apiResponseDownloadStatus
 ```
 

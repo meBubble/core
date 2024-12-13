@@ -47,6 +47,7 @@ type BlockRecordFile struct {
 	Format         uint16               // File Format
 	Size           uint64               // Size of the file data
 	NodeID         []byte               // Node ID, owner of the file
+	OriginNodeID   []byte               // Origin Node ID, to trace who is the original owner of this file
 	Tags           []BlockRecordFileTag // Tags provide additional metadata
 	Username       string               // Username of the User who uploaded the file
 	ProfilePicture []byte               // UserProfile phone

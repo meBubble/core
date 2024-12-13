@@ -44,6 +44,7 @@ type apiFile struct {
 	Description    string            `json:"description"`    // Description. This is expected to be multiline and contain hashtags!
 	Date           time.Time         `json:"date"`           // Date shared
 	NodeID         []byte            `json:"nodeid"`         // Node ID, owner of the file. Read only.
+	OriginalNodeID []byte            `json:"originalnodeid"` // OriginalNodeID, original owner of the file. Read only. This field would exist if the file was shared in the network.
 	NodeIDHex      string            `json:"nodeidhex"`      // Node ID HEX, owner of the file in the form of hex value
 	Metadata       []apiFileMetadata `json:"metadata"`       // Additional metadata.
 	Username       string            `json:"username"`       // Username of the user who uploaded the file
@@ -53,7 +54,7 @@ type apiFile struct {
 // --- conversion from core to API data ---
 // Currently in a Hacky way for quick generalised filters
 func blockRecordFileToAPI(input blockchain.BlockRecordFile, localNode bool) (output apiFile) {
-	output = apiFile{ID: input.ID, Hash: input.Hash, HashHex: hex.EncodeToString(input.Hash), NodeID: input.NodeID, NodeIDHex: hex.EncodeToString(input.NodeID), Type: input.Type, Format: input.Format, Size: input.Size, Username: input.Username, ProfilePicture: input.ProfilePicture, Metadata: []apiFileMetadata{}}
+	output = apiFile{ID: input.ID, Hash: input.Hash, HashHex: hex.EncodeToString(input.Hash), NodeID: input.NodeID, OriginalNodeID: input.OriginNodeID, NodeIDHex: hex.EncodeToString(input.NodeID), Type: input.Type, Format: input.Format, Size: input.Size, Username: input.Username, ProfilePicture: input.ProfilePicture, Metadata: []apiFileMetadata{}}
 
 	NumberOfNodesShared := false
 
