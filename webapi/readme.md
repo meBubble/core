@@ -229,17 +229,23 @@ These functions allow adding, deleting, and listing files stored on the users bl
 
 ```go
 type apiFile struct {
-    ID          uuid.UUID         `json:"id"`          // Unique ID.
-    Hash        []byte            `json:"hash"`        // Blake3 hash of the file data
-    Type        uint8             `json:"type"`        // File Type. For example audio or document. See TypeX.
-    Format      uint16            `json:"format"`      // File Format. This is more granular, for example PDF or Word file. See FormatX.
-    Size        uint64            `json:"size"`        // Size of the file
-    Folder      string            `json:"folder"`      // Folder, optional
-    Name        string            `json:"name"`        // Name of the file
-    Description string            `json:"description"` // Description. This is expected to be multiline and contain hashtags!
-    Date        time.Time         `json:"date"`        // Date shared
-    NodeID      []byte            `json:"nodeid"`      // Node ID, owner of the file. Read only.
-    Metadata    []apiFileMetadata `json:"metadata"`    // Additional metadata.
+ID             uuid.UUID         `json:"id"`             // Unique ID.
+Hash           []byte            `json:"hash"`           // Blake3 hash of the file data
+HashHex        string            `json:"hashhex"`        // Blake3 hash of the file data in the form of hex
+Type           uint8             `json:"type"`           // File Type. For example audio or document. See TypeX.
+Format         uint16            `json:"format"`         // File Format. This is more granular, for example PDF or Word file. See FormatX.
+Size           uint64            `json:"size"`           // Size of the file
+Folder         string            `json:"folder"`         // Folder, optional
+Name           string            `json:"name"`           // Name of the file
+Description    string            `json:"description"`    // Description. This is expected to be multiline and contain hashtags!
+Date           time.Time         `json:"date"`           // Date shared
+NodeID         []byte            `json:"nodeid"`         // Node ID, owner of the file. Read only.
+SrcNodeID      []byte            `json:"srcnodeid"`      // Srcnodeid, original owner of the file. Read only. This field would exist if the file was shared in the network.
+SrcNodeIDHex   string            `json:"srcnodeidhex"`   // SrcnodeidHEX, original owner of the file in the form of hex value
+NodeIDHex      string            `json:"nodeidhex"`      // Node ID HEX, owner of the file in the form of hex value
+Metadata       []apiFileMetadata `json:"metadata"`       // Additional metadata.
+Username       string            `json:"username"`       // Username of the user who uploaded the file
+ProfilePicture []byte            `json:"ProfilePicture"` // ProfilePicture of the particular user
 }
 
 type apiFileMetadata struct {
@@ -256,7 +262,7 @@ type apiFileMetadata struct {
 Below is the list of defined metadata types. Undefined types may be used by clients, but are always mapped into the `blob` field. Virtual tags are generated at runtime and are read-only. They cannot be stored on the blockchain.
 
 | Type | Constant         | Encoding | Virtual | Info                                                                                         |
-| ---- | ---------------- | -------- | ------- | -------------------------------------------------------------------------------------------- |
+|------| ---------------- | -------- | ------- | -------------------------------------------------------------------------------------------- |
 | 0    | TagName          | Text     |         | Mapped into Name field. Name of file.                                                        |
 | 1    | TagFolder        | Text     |         | Mapped into Folder field. Folder name.                                                       |
 | 2    | TagDescription   | Text     |         | Mapped into Description field. Arbitrary description of the file. May contain hashtags.      |
@@ -264,6 +270,7 @@ Below is the list of defined metadata types. Undefined types may be used by clie
 | 4    | TagDateCreated   | Date     |         | Date when the file was originally created.                                                   |
 | 5    | TagSharedByCount | Number   | x       | Count of peers that share the file.                                                          |
 | 6    | TagSharedByGeoIP | Text/CSV | x       | GeoIP data of peers that are sharing the file. CSV encoded with header "latitude,longitude". |
+| 7    | TagSourceNodeID | None |       | Tracks the source Node ID who uploaded the file |
 
 The file type is an indication what type of content the file's data is:
 
