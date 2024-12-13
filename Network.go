@@ -11,7 +11,6 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
-	"tailscale.com/net/netmon"
 	"time"
 
 	"github.com/meBubble/core/protocol"
@@ -21,21 +20,21 @@ import (
 // Network is a connection adapter through one network interface (adapter).
 // Note that for each IP on the same adapter separate network entries are created.
 type Network struct {
-	iface           *netmon.Interface // Network interface belonging to the IP. May not be set.
-	ipnet           *net.IPNet        // IP network the listening address belongs to. May not be set.
-	address         *net.UDPAddr      // IP:Port where the server listens
-	socket          *net.UDPConn      // active socket for send/receive
-	multicastIP     net.IP            // Multicast IP, IPv6 only.
-	multicastSocket net.PacketConn    // Multicast socket, IPv6 only.
-	broadcastSocket net.PacketConn    // Broadcast socket, IPv4 only.
-	broadcastIPv4   []net.IP          // Broadcast IPs, IPv4 only.
-	portExternal    uint16            // External port. 0 if not known.
-	ipExternal      net.IP            // External IP of the network. Usually not known.
-	nat             upnp.NAT          // UPnP: NAT information
-	isTerminated    bool              // If true, the network was signaled for termination
-	terminateSignal chan interface{}  // gets closed on termination signal, can be used in select via "case _ = <- network.terminateSignal:"
-	sync.RWMutex                      // for sychronized closing
-	networkGroup    *Networks         // Pointer to the pool of networks that this is part of
+	iface           *net.Interface   // Network interface belonging to the IP. May not be set.
+	ipnet           *net.IPNet       // IP network the listening address belongs to. May not be set.
+	address         *net.UDPAddr     // IP:Port where the server listens
+	socket          *net.UDPConn     // active socket for send/receive
+	multicastIP     net.IP           // Multicast IP, IPv6 only.
+	multicastSocket net.PacketConn   // Multicast socket, IPv6 only.
+	broadcastSocket net.PacketConn   // Broadcast socket, IPv4 only.
+	broadcastIPv4   []net.IP         // Broadcast IPs, IPv4 only.
+	portExternal    uint16           // External port. 0 if not known.
+	ipExternal      net.IP           // External IP of the network. Usually not known.
+	nat             upnp.NAT         // UPnP: NAT information
+	isTerminated    bool             // If true, the network was signaled for termination
+	terminateSignal chan interface{} // gets closed on termination signal, can be used in select via "case _ = <- network.terminateSignal:"
+	sync.RWMutex                     // for sychronized closing
+	networkGroup    *Networks        // Pointer to the pool of networks that this is part of
 	backend         *Backend
 }
 
