@@ -92,6 +92,7 @@ func (api *WebapiInstance) apiProfileRead(w http.ResponseWriter, r *http.Request
 	r.ParseForm()
 	fieldN, err1 := strconv.Atoi(r.URL.Query().Get("field"))
 	NodeID, valid := DecodeBlake3Hash(r.URL.Query().Get("node"))
+	self := r.URL.Query().Get("self")
 
 	if err1 != nil || fieldN < 0 {
 		http.Error(w, "", http.StatusBadRequest)
@@ -103,12 +104,24 @@ func (api *WebapiInstance) apiProfileRead(w http.ResponseWriter, r *http.Request
 
 	if !valid {
 		_, node, _ := api.Backend.FindNode(NodeID, 100)
+
 		if data, result.Status = node.Backend.UserBlockchain.ProfileReadField(uint16(fieldN)); result.Status == blockchain.StatusOK {
 			result.Fields = append(result.Fields, blockRecordProfileToAPI(blockchain.BlockRecordProfile{Type: uint16(fieldN), Data: data}))
+			api.Backend.LogError("FindNode", "ReadFile %s", "Status OK")
+		} else {
+			api.Backend.LogError("ProfileReadField", "result.Status NOK %d", result.Status)
 		}
 	} else {
-		if api.Backend.NodelistLookup(NodeID) != nil {
+		if self == "true" {
+			if data, result.Status = api.Backend.UserBlockchain.ProfileReadField(uint16(fieldN)); result.Status == blockchain.StatusOK {
+				api.Backend.LogError("NodelistLookup", "ReadFiled self %s", "result.Fields")
+				result.Fields = append(result.Fields, blockRecordProfileToAPI(blockchain.BlockRecordProfile{Type: uint16(fieldN), Data: data}))
+
+			}
+		} else {
 			if data, result.Status = api.Backend.NodelistLookup(NodeID).Backend.UserBlockchain.ProfileReadField(uint16(fieldN)); result.Status == blockchain.StatusOK {
+				api.Backend.LogError("NodelistLookup", "ReadFiled %s", "Status OK")
+
 				result.Fields = append(result.Fields, blockRecordProfileToAPI(blockchain.BlockRecordProfile{Type: uint16(fieldN), Data: data}))
 			}
 		}

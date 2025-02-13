@@ -12,6 +12,7 @@ func (blockchain *Blockchain) ProfileReadField(index uint16) (data []byte, statu
 
 	status = blockchain.Iterate(func(block *Block) (statusI int) {
 		fields, err := DecodeBlockRecordProfile(block.RecordsRaw)
+
 		if err != nil {
 			return StatusCorruptBlockRecord
 		} else if len(fields) == 0 {
@@ -44,6 +45,7 @@ func (blockchain *Blockchain) ProfileList() (fields []BlockRecordProfile, status
 
 	status = blockchain.Iterate(func(block *Block) (statusI int) {
 		fields, err := DecodeBlockRecordProfile(block.RecordsRaw)
+
 		if err != nil {
 			return StatusCorruptBlockRecord
 		}

@@ -197,7 +197,10 @@ func (api *WebapiInstance) apiDownloadStatus(w http.ResponseWriter, r *http.Requ
 
 	if info.status >= DownloadWaitSwarm {
 		response.File = info.file
-
+		//TODO: check if correct date is choosen
+		if info.status == DownloadFinished {
+			response.File.Date = info.ended // need to check whether the date should be from Blockchain Tag
+		}
 		response.Progress.TotalSize = info.file.Size
 		response.Progress.DownloadedSize = info.DiskFile.StoredSize
 
